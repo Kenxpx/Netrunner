@@ -1,6 +1,6 @@
 import type { RenderContext } from '../types.js';
 import { isLimitReached } from '../types.js';
-import { getContextPercent, getModelName } from '../stdin.js';
+import { getContextPercent, getBufferedPercent, getModelName } from '../stdin.js';
 import { coloredBar, cyan, dim, magenta, red, yellow, getContextColor, RESET } from './colors.js';
 
 /**
@@ -9,7 +9,13 @@ import { coloredBar, cyan, dim, magenta, red, yellow, getContextColor, RESET } f
  */
 export function renderSessionLine(ctx: RenderContext): string {
   const model = getModelName(ctx.stdin);
-  const percent = getContextPercent(ctx.stdin);
+
+  const rawPercent = getContextPercent(ctx.stdin);
+  const bufferedPercent = getBufferedPercent(ctx.stdin);
+  const percent = ctx.config?.display?.autocompactBuffer === 'disabled'
+    ? rawPercent
+    : bufferedPercent;
+
   const bar = coloredBar(percent);
 
   const parts: string[] = [];
