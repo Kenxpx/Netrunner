@@ -158,6 +158,7 @@ describe('loadConfig behavior', () => {
     assert.ok('showDuration' in config.display);
     assert.ok('showTokenBreakdown' in config.display);
     assert.ok('showUsage' in config.display);
+    assert.ok('autocompactBuffer' in config.display);
     assert.ok('showTools' in config.display);
     assert.ok('showAgents' in config.display);
     assert.ok('showTodos' in config.display);
