@@ -12,7 +12,7 @@ All notable changes to Claude HUD will be documented in this file.
   - `'disabled'`: Shows raw % (matches `/context` when autocompact OFF)
 
 ### Credits
-- Ideas from PRs #30 (@r-firpo), #43 (@yansircc), #49 (@StephenJoshii) informed the final solution
+- Ideas from [#30](https://github.com/jarrodwatts/claude-hud/pull/30) ([@r-firpo](https://github.com/r-firpo)), [#43](https://github.com/jarrodwatts/claude-hud/pull/43) ([@yansircc](https://github.com/yansircc)), [#49](https://github.com/jarrodwatts/claude-hud/pull/49) ([@StephenJoshii](https://github.com/StephenJoshii)) informed the final solution
 
 ---
 
