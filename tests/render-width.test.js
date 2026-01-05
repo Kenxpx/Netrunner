@@ -108,7 +108,11 @@ function captureRender(ctx) {
   return logs.map(line => stripAnsi(line).replace(/\u00A0/g, ' '));
 }
 
-test('render wraps long lines to terminal width and keeps activity visible', () => {
+function countContaining(lines, needle) {
+  return lines.filter(line => line.includes(needle)).length;
+}
+
+test('render wraps long lines to terminal width and keeps all activity lines visible', () => {
   const ctx = baseContext();
   ctx.stdin.model = { display_name: 'Sonnet 4.6' };
   ctx.stdin.cwd = '/tmp/very-long-project-name-for-terminal-wrap-checking';
@@ -133,14 +137,26 @@ test('render wraps long lines to terminal width and keeps activity visible', () 
   ctx.transcript.tools = [
     { id: 'tool-1', name: 'Read', status: 'completed', startTime: new Date(0), endTime: new Date(0), duration: 0 },
   ];
+  ctx.transcript.agents = [
+    { id: 'agent-1', type: 'plan-a', status: 'running', startTime: new Date(0) },
+    { id: 'agent-2', type: 'plan-b', status: 'completed', startTime: new Date(0), endTime: new Date(3000) },
+    { id: 'agent-3', type: 'plan-c', status: 'completed', startTime: new Date(0), endTime: new Date(3500) },
+  ];
+  ctx.transcript.todos = [
+    { content: 'todo-marker', status: 'in_progress' },
+  ];
 
   let lines = [];
-  withTerminal(50, () => {
+  withTerminal(20, () => {
     lines = captureRender(ctx);
   });
 
-  assert.ok(lines.some(line => line.includes('Read')), 'should keep activity line visible');
-  assert.ok(lines.every(line => displayWidth(line) <= 50), 'all lines should fit terminal width');
+  assert.equal(countContaining(lines, 'Read'), 1, 'tool line should remain visible');
+  assert.equal(countContaining(lines, 'plan-a'), 1, 'first agent line should remain visible');
+  assert.equal(countContaining(lines, 'plan-b'), 1, 'second agent line should remain visible');
+  assert.equal(countContaining(lines, 'plan-c'), 1, 'third agent line should remain visible');
+  assert.equal(countContaining(lines, 'todo-marker'), 1, 'todo line should remain visible');
+  assert.ok(lines.every(line => displayWidth(line) <= 20), 'all lines should fit terminal width');
 });
 
 test('render falls back to COLUMNS env when stdout.columns is unavailable', () => {
@@ -167,6 +183,27 @@ test('render falls back to COLUMNS env when stdout.columns is unavailable', () =
   assert.ok(lines.every(line => displayWidth(line) <= 10), 'all lines should fit COLUMNS width');
 });
 
+test('render prefers stdout columns over COLUMNS env fallback', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/very-long-project-name-for-width-checking';
+  const originalEnvColumns = process.env.COLUMNS;
+  process.env.COLUMNS = '10';
+
+  let lines = [];
+  withTerminal(30, () => {
+    lines = captureRender(ctx);
+  });
+
+  if (originalEnvColumns === undefined) {
+    delete process.env.COLUMNS;
+  } else {
+    process.env.COLUMNS = originalEnvColumns;
+  }
+
+  assert.ok(lines.every(line => displayWidth(line) <= 30), 'stdout width should be honored');
+  assert.ok(lines.some(line => displayWidth(line) > 10), 'stdout width should override COLUMNS fallback');
+});
+
 test('render does not split model/provider separator inside brackets', () => {
   const ctx = baseContext();
   ctx.stdin.model = { display_name: 'Sonnet', id: 'anthropic.claude-3-5-sonnet-20240620-v1:0' };
@@ -175,6 +212,13 @@ test('render does not split model/provider separator inside brackets', () => {
   ctx.config.display.showConfigCounts = false;
   ctx.config.display.showDuration = false;
 
+  let wideLines = [];
+  withTerminal(80, () => {
+    wideLines = captureRender(ctx);
+  });
+
+  assert.ok(wideLines.some(line => line.includes('[Sonnet | Bedrock]')), 'model/provider badge should be preserved when width allows');
+
   let lines = [];
   withTerminal(12, () => {
     lines = captureRender(ctx);
@@ -182,6 +226,23 @@ test('render does not split model/provider separator inside brackets', () => {
 
   assert.equal(lines.length, 1, 'single compact line should be truncated, not split');
   assert.ok(!lines[0].startsWith('Bedrock]'), 'provider label should not become a wrapped prefix');
+});
+
+test('render clamps separator width in narrow terminals', () => {
+  const ctx = baseContext();
+  ctx.config.showSeparators = true;
+  ctx.transcript.tools = [
+    { id: 'tool-1', name: 'Read', status: 'completed', startTime: new Date(0), endTime: new Date(0), duration: 0 },
+  ];
+
+  let lines = [];
+  withTerminal(8, () => {
+    lines = captureRender(ctx);
+  });
+
+  const separatorLine = lines.find(line => line.includes('─'));
+  assert.ok(separatorLine, 'separator should render when enabled with activity');
+  assert.ok(displayWidth(separatorLine) <= 8, 'separator should fit terminal width');
 });
 
 test('render truncation respects Unicode display width', () => {

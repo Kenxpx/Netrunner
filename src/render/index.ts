@@ -185,12 +185,11 @@ function truncateToWidth(str: string, maxWidth: number): string {
   return `${sliceVisible(str, keep)}${suffix}${RESET}`;
 }
 
-function splitWrapParts(line: string): Array<{ separator: string; segment: string }> {
+function splitLineBySeparators(line: string): { segments: string[]; separators: string[] } {
   const segments: string[] = [];
   const separators: string[] = [];
   let currentStart = 0;
   let i = 0;
-  let bracketDepth = 0;
 
   while (i < line.length) {
     const ansiMatch = ANSI_ESCAPE_PATTERN.exec(line.slice(i));
@@ -199,23 +198,11 @@ function splitWrapParts(line: string): Array<{ separator: string; segment: strin
       continue;
     }
 
-    const char = line[i];
-    if (char === '[') {
-      bracketDepth += 1;
-      i += 1;
-      continue;
-    }
-    if (char === ']') {
-      bracketDepth = Math.max(0, bracketDepth - 1);
-      i += 1;
-      continue;
-    }
-
     const separator = line.startsWith(' | ', i)
       ? ' | '
       : (line.startsWith(' │ ', i) ? ' │ ' : null);
 
-    if (separator && bracketDepth === 0) {
+    if (separator) {
       segments.push(line.slice(currentStart, i));
       separators.push(separator);
       i += separator.length;
@@ -227,11 +214,16 @@ function splitWrapParts(line: string): Array<{ separator: string; segment: strin
   }
 
   segments.push(line.slice(currentStart));
+  return { segments, separators };
+}
+
+function splitWrapParts(line: string): Array<{ separator: string; segment: string }> {
+  const { segments, separators } = splitLineBySeparators(line);
   if (segments.length === 0) {
     return [];
   }
 
-  const parts: Array<{ separator: string; segment: string }> = [{
+  let parts: Array<{ separator: string; segment: string }> = [{
     separator: '',
     segment: segments[0],
   }];
@@ -240,6 +232,29 @@ function splitWrapParts(line: string): Array<{ separator: string; segment: strin
       separator: separators[segmentIndex - 1] ?? ' | ',
       segment: segments[segmentIndex],
     });
+  }
+
+  // Keep the leading [model | provider] block together.
+  // This avoids splitting inside the model badge while still splitting
+  // separators elsewhere in the line.
+  const firstVisible = stripAnsi(parts[0].segment).trimStart();
+  const firstHasOpeningBracket = firstVisible.startsWith('[');
+  const firstHasClosingBracket = stripAnsi(parts[0].segment).includes(']');
+  if (firstHasOpeningBracket && !firstHasClosingBracket && parts.length > 1) {
+    let mergedSegment = parts[0].segment;
+    let consumeIndex = 1;
+    while (consumeIndex < parts.length) {
+      const nextPart = parts[consumeIndex];
+      mergedSegment += `${nextPart.separator}${nextPart.segment}`;
+      consumeIndex += 1;
+      if (stripAnsi(nextPart.segment).includes(']')) {
+        break;
+      }
+    }
+    parts = [
+      { separator: '', segment: mergedSegment },
+      ...parts.slice(consumeIndex),
+    ];
   }
 
   return parts;
@@ -364,9 +379,10 @@ export function render(ctx: RenderContext): void {
 
   lines.push(...activityLines);
 
+  const physicalLines = lines.flatMap(line => line.split('\n'));
   const visibleLines = terminalWidth
-    ? lines.flatMap(line => wrapLineToWidth(line, terminalWidth))
-    : lines;
+    ? physicalLines.flatMap(line => wrapLineToWidth(line, terminalWidth))
+    : physicalLines;
 
   for (const line of visibleLines) {
     const outputLine = `${RESET}${line.replace(/ /g, '\u00A0')}`;
