@@ -4,9 +4,23 @@ All notable changes to Claude HUD will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.10] - 2026-03-14
+
+### Added
+- Semantic HUD color overrides for context and usage states.
+
 ### Changed
 - Update the fallback autocompact buffer estimate from `22.5%` (`45k/200k`) to `16.5%` (`33k/200k`) to match current Claude Code `/context` output.
 - Clarify in code comments that the fallback buffer is empirical and may change independently of documented Claude Code releases.
+- Text-only usage display now shows the 7-day reset countdown when applicable.
+- Rate-limited usage refreshes now keep the last successful values visible while marking the HUD as syncing.
+
+### Fixed
+- Context percentage no longer starts with an inflated fallback percentage before native data exists.
+- Usage API rate-limit handling is more resilient, including better stale-cache behavior and `Retry-After` parsing.
+- Zero-byte usage lock files now recover instead of leaving the HUD permanently busy.
+- Plugin selection now prefers the highest installed version instead of filesystem mtime.
+- macOS Keychain lookup now prefers account-scoped credentials and avoids cross-account fallback when multiple accounts exist.
 
 ---
 
