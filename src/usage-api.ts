@@ -571,11 +571,46 @@ function isMissingKeychainItemError(error: unknown): boolean {
 export function resolveKeychainCredentials(
   serviceNames: string[],
   now: number,
-  loadService: (serviceName: string) => string
+  loadService: (serviceName: string, accountName?: string) => string,
+  accountName?: string | null,
 ): { credentials: { accessToken: string; subscriptionType: string } | null; shouldBackoff: boolean } {
   let shouldBackoff = false;
+  const servicesWithAccountScopedEntries = new Set<string>();
 
   for (const serviceName of serviceNames) {
+    try {
+      const keychainData = accountName
+        ? loadService(serviceName, accountName).trim()
+        : loadService(serviceName).trim();
+      if (!keychainData) continue;
+
+      if (accountName) {
+        servicesWithAccountScopedEntries.add(serviceName);
+      }
+
+      const data: CredentialsFile = JSON.parse(keychainData);
+      const credentials = parseCredentialsData(data, now);
+      if (credentials) {
+        return { credentials, shouldBackoff: false };
+      }
+    } catch (error) {
+      if (!isMissingKeychainItemError(error)) {
+        shouldBackoff = true;
+      }
+    }
+  }
+
+  if (!accountName) {
+    return { credentials: null, shouldBackoff };
+  }
+
+  for (const serviceName of serviceNames) {
+    if (servicesWithAccountScopedEntries.has(serviceName)) {
+      // Avoid cross-account leakage: if this service has an entry for the current user,
+      // do not fall back to whichever account the generic lookup returns first.
+      continue;
+    }
+
     try {
       const keychainData = loadService(serviceName).trim();
       if (!keychainData) continue;
@@ -593,6 +628,15 @@ export function resolveKeychainCredentials(
   }
 
   return { credentials: null, shouldBackoff };
+}
+
+function getKeychainAccountName(): string | null {
+  try {
+    const username = os.userInfo().username.trim();
+    return username || null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -617,16 +661,23 @@ function readKeychainCredentials(now: number, homeDir: string): { accessToken: s
   try {
     const configDir = getClaudeConfigDir(homeDir);
     const serviceNames = getKeychainServiceNames(configDir, homeDir);
+    const accountName = getKeychainAccountName();
     debug('Trying keychain service names:', serviceNames);
+    if (accountName) {
+      debug('Trying keychain account name:', accountName);
+    }
 
     const resolved = resolveKeychainCredentials(
       serviceNames,
       now,
-      (serviceName) => execFileSync(
+      (serviceName, lookupAccountName) => execFileSync(
         '/usr/bin/security',
-        ['find-generic-password', '-s', serviceName, '-w'],
+        lookupAccountName
+          ? ['find-generic-password', '-s', serviceName, '-a', lookupAccountName, '-w']
+          : ['find-generic-password', '-s', serviceName, '-w'],
         { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: KEYCHAIN_TIMEOUT_MS }
-      )
+      ),
+      accountName,
     );
 
     if (resolved.credentials) {
