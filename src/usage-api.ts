@@ -580,15 +580,15 @@ export function resolveKeychainCredentials(
   for (const serviceName of serviceNames) {
     try {
       const keychainData = accountName
-        ? loadService(serviceName, accountName).trim()
-        : loadService(serviceName).trim();
-      if (!keychainData) continue;
-
+        ? loadService(serviceName, accountName)
+        : loadService(serviceName);
       if (accountName) {
         servicesWithAccountScopedEntries.add(serviceName);
       }
+      const trimmedKeychainData = keychainData.trim();
+      if (!trimmedKeychainData) continue;
 
-      const data: CredentialsFile = JSON.parse(keychainData);
+      const data: CredentialsFile = JSON.parse(trimmedKeychainData);
       const credentials = parseCredentialsData(data, now);
       if (credentials) {
         return { credentials, shouldBackoff: false };
