@@ -324,6 +324,34 @@ describe('resolveKeychainCredentials', () => {
     assert.equal(result.shouldBackoff, false);
     assert.deepEqual(calls, [{ serviceName: 'Claude Code-credentials', accountName: 'jarrod' }]);
   });
+
+  test('does not fall back to a generic entry when account-scoped lookup fails with a non-missing error', () => {
+    const now = 1000;
+    const serviceNames = ['Claude Code-credentials'];
+    const calls = [];
+
+    const result = resolveKeychainCredentials(
+      serviceNames,
+      now,
+      (serviceName, accountName) => {
+        calls.push({ serviceName, accountName: accountName ?? null });
+        if (accountName === 'jarrod') {
+          throw new Error('security command timed out');
+        }
+
+        return JSON.stringify(buildCredentials({
+          accessToken: 'generic-token',
+          subscriptionType: 'claude_pro_2024',
+          expiresAt: now + 60_000,
+        }));
+      },
+      'jarrod',
+    );
+
+    assert.equal(result.credentials, null);
+    assert.equal(result.shouldBackoff, true);
+    assert.deepEqual(calls, [{ serviceName: 'Claude Code-credentials', accountName: 'jarrod' }]);
+  });
 });
 
 describe('getUsage', () => {

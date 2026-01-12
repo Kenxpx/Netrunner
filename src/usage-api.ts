@@ -595,6 +595,9 @@ export function resolveKeychainCredentials(
       }
     } catch (error) {
       if (!isMissingKeychainItemError(error)) {
+        if (accountName) {
+          servicesWithAccountScopedEntries.add(serviceName);
+        }
         shouldBackoff = true;
       }
     }
