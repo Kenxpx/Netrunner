@@ -12,6 +12,7 @@ All notable changes to Claude HUD will be documented in this file.
 ### Changed
 - Update the fallback autocompact buffer estimate from `22.5%` (`45k/200k`) to `16.5%` (`33k/200k`) to match current Claude Code `/context` output.
 - Clarify in code comments that the fallback buffer is empirical and may change independently of documented Claude Code releases.
+- Clarify that context percentages and token displays scale with Claude Code's reported context window size, including newer 1M-context sessions.
 - Text-only usage display now shows the 7-day reset countdown when applicable.
 - Rate-limited usage refreshes now keep the last successful values visible while marking the HUD as syncing.
 

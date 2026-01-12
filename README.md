@@ -90,6 +90,7 @@ Claude Code → stdin JSON → claude-hud → stdout → displayed in your termi
 
 **Key features:**
 - Native token data from Claude Code (not estimated)
+- Scales with Claude Code's reported context window size, including newer 1M-context sessions
 - Parses the transcript for tool/agent activity
 - Updates every ~300ms
 
