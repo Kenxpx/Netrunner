@@ -55,6 +55,7 @@ Questions: **Turn Off → Turn On → Git Style → Layout/Reset** (4 questions 
   - "Tools activity" - ◐ Edit: file.ts | ✓ Read ×3
   - "Agents status" - ◐ explore [haiku]: Finding code
   - "Todo progress" - ▸ Fix bug (2/5 tasks)
+  - "Project name" - my-project path display
   - "Git status" - git:(main*) branch indicator
   - "Config counts" - 2 CLAUDE.md | 4 rules
   - "Token breakdown" - (in: 45k, cache: 12k)
@@ -84,10 +85,11 @@ If preset has all items OFF (Minimal), Q3 shows "Nothing to disable - Minimal pr
   - "Tools activity" - ◐ Edit: file.ts | ✓ Read ×3
   - "Agents status" - ◐ explore [haiku]: Finding code
   - "Todo progress" - ▸ Fix bug (2/5 tasks)
+  - "Project name" - my-project path display
   - "Git status" - git:(main*) branch indicator
   - "Usage bar style" - ██░░ 25% visual bar (only if usageBarEnabled is true)
 
-If more than 4 items ON, show Activity items (Tools, Agents, Todos, Git) first.
+If more than 4 items ON, show Activity items (Tools, Agents, Todos, Project, Git) first.
 Info items (Counts, Tokens, Usage, Speed, Duration) can be turned off via "Reset to Minimal" in Q4.
 
 ### Q2: Turn On
@@ -174,6 +176,7 @@ Info items (Counts, Tokens, Usage, Speed, Duration) can be turned off via "Reset
 | Tools activity | `display.showTools` |
 | Agents status | `display.showAgents` |
 | Todo progress | `display.showTodos` |
+| Project name | `display.showProject` |
 | Git status | `gitStatus.enabled` |
 | Config counts | `display.showConfigCounts` |
 | Token breakdown | `display.showTokenBreakdown` |
