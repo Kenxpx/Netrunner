@@ -4,6 +4,12 @@ All notable changes to Claude HUD will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Native context percentage support for Claude Code v2.1.6+
+  - Uses `used_percentage` field from stdin when available (accurate, matches `/context`)
+  - Automatic fallback to manual calculation for older versions
+  - Handles edge cases: NaN, negative values, values >100
+
 ### Changed
 - Context percentage now uses percentage-based buffer (22.5%) instead of hardcoded 45k tokens
   - Scales correctly for enterprise context windows (>200k)
