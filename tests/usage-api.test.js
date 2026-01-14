@@ -352,6 +352,41 @@ describe('resolveKeychainCredentials', () => {
     assert.equal(result.shouldBackoff, true);
     assert.deepEqual(calls, [{ serviceName: 'Claude Code-credentials', accountName: 'jarrod' }]);
   });
+
+  test('does not fall back to generic credentials from another service when a later account-scoped entry is unusable', () => {
+    const now = 1000;
+    const serviceNames = ['Claude Code-credentials-hashed', 'Claude Code-credentials'];
+    const calls = [];
+
+    const result = resolveKeychainCredentials(
+      serviceNames,
+      now,
+      (serviceName, accountName) => {
+        calls.push({ serviceName, accountName: accountName ?? null });
+        if (accountName === 'jarrod' && serviceName === 'Claude Code-credentials-hashed') {
+          throw buildMissingKeychainError();
+        }
+
+        if (accountName === 'jarrod' && serviceName === 'Claude Code-credentials') {
+          return JSON.stringify({ mcpOAuth: { accessToken: 'wrong-scope' } });
+        }
+
+        return JSON.stringify(buildCredentials({
+          accessToken: `generic-${serviceName}`,
+          subscriptionType: 'claude_pro_2024',
+          expiresAt: now + 60_000,
+        }));
+      },
+      'jarrod',
+    );
+
+    assert.equal(result.credentials, null);
+    assert.equal(result.shouldBackoff, false);
+    assert.deepEqual(calls, [
+      { serviceName: 'Claude Code-credentials-hashed', accountName: 'jarrod' },
+      { serviceName: 'Claude Code-credentials', accountName: 'jarrod' },
+    ]);
+  });
 });
 
 describe('getUsage', () => {

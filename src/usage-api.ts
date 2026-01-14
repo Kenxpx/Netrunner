@@ -575,16 +575,14 @@ export function resolveKeychainCredentials(
   accountName?: string | null,
 ): { credentials: { accessToken: string; subscriptionType: string } | null; shouldBackoff: boolean } {
   let shouldBackoff = false;
-  const servicesWithAccountScopedEntries = new Set<string>();
+  let allowGenericFallback = Boolean(accountName);
 
   for (const serviceName of serviceNames) {
     try {
       const keychainData = accountName
         ? loadService(serviceName, accountName)
         : loadService(serviceName);
-      if (accountName) {
-        servicesWithAccountScopedEntries.add(serviceName);
-      }
+      if (accountName) allowGenericFallback = false;
       const trimmedKeychainData = keychainData.trim();
       if (!trimmedKeychainData) continue;
 
@@ -595,25 +593,17 @@ export function resolveKeychainCredentials(
       }
     } catch (error) {
       if (!isMissingKeychainItemError(error)) {
-        if (accountName) {
-          servicesWithAccountScopedEntries.add(serviceName);
-        }
+        if (accountName) allowGenericFallback = false;
         shouldBackoff = true;
       }
     }
   }
 
-  if (!accountName) {
+  if (!accountName || !allowGenericFallback) {
     return { credentials: null, shouldBackoff };
   }
 
   for (const serviceName of serviceNames) {
-    if (servicesWithAccountScopedEntries.has(serviceName)) {
-      // Avoid cross-account leakage: if this service has an entry for the current user,
-      // do not fall back to whichever account the generic lookup returns first.
-      continue;
-    }
-
     try {
       const keychainData = loadService(serviceName).trim();
       if (!keychainData) continue;
