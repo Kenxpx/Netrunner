@@ -43,52 +43,61 @@ export function renderSessionLine(ctx) {
     else {
         parts.push(contextValueDisplay);
     }
-    // Project path (SECOND)
-    if (ctx.stdin.cwd) {
+    // Project path + git status (SECOND)
+    let projectPart = null;
+    if (display?.showProject !== false && ctx.stdin.cwd) {
         // Split by both Unix (/) and Windows (\) separators for cross-platform support
         const segments = ctx.stdin.cwd.split(/[/\\]/).filter(Boolean);
         const pathLevels = ctx.config?.pathLevels ?? 1;
         // Always join with forward slash for consistent display
         // Handle root path (/) which results in empty segments
         const projectPath = segments.length > 0 ? segments.slice(-pathLevels).join('/') : '/';
-        // Build git status string
-        let gitPart = '';
-        const gitConfig = ctx.config?.gitStatus;
-        const showGit = gitConfig?.enabled ?? true;
-        if (showGit && ctx.gitStatus) {
-            const gitParts = [ctx.gitStatus.branch];
-            // Show dirty indicator
-            if ((gitConfig?.showDirty ?? true) && ctx.gitStatus.isDirty) {
-                gitParts.push('*');
-            }
-            // Show ahead/behind (with space separator for readability)
-            if (gitConfig?.showAheadBehind) {
-                if (ctx.gitStatus.ahead > 0) {
-                    gitParts.push(` ↑${ctx.gitStatus.ahead}`);
-                }
-                if (ctx.gitStatus.behind > 0) {
-                    gitParts.push(` ↓${ctx.gitStatus.behind}`);
-                }
-            }
-            // Show file stats in Starship-compatible format (!modified +added ✘deleted ?untracked)
-            if (gitConfig?.showFileStats && ctx.gitStatus.fileStats) {
-                const { modified, added, deleted, untracked } = ctx.gitStatus.fileStats;
-                const statParts = [];
-                if (modified > 0)
-                    statParts.push(`!${modified}`);
-                if (added > 0)
-                    statParts.push(`+${added}`);
-                if (deleted > 0)
-                    statParts.push(`✘${deleted}`);
-                if (untracked > 0)
-                    statParts.push(`?${untracked}`);
-                if (statParts.length > 0) {
-                    gitParts.push(` ${statParts.join(' ')}`);
-                }
-            }
-            gitPart = ` ${magenta('git:(')}${cyan(gitParts.join(''))}${magenta(')')}`;
+        projectPart = yellow(projectPath);
+    }
+    let gitPart = '';
+    const gitConfig = ctx.config?.gitStatus;
+    const showGit = gitConfig?.enabled ?? true;
+    if (showGit && ctx.gitStatus) {
+        const gitParts = [ctx.gitStatus.branch];
+        // Show dirty indicator
+        if ((gitConfig?.showDirty ?? true) && ctx.gitStatus.isDirty) {
+            gitParts.push('*');
         }
-        parts.push(`${yellow(projectPath)}${gitPart}`);
+        // Show ahead/behind (with space separator for readability)
+        if (gitConfig?.showAheadBehind) {
+            if (ctx.gitStatus.ahead > 0) {
+                gitParts.push(` ↑${ctx.gitStatus.ahead}`);
+            }
+            if (ctx.gitStatus.behind > 0) {
+                gitParts.push(` ↓${ctx.gitStatus.behind}`);
+            }
+        }
+        // Show file stats in Starship-compatible format (!modified +added ✘deleted ?untracked)
+        if (gitConfig?.showFileStats && ctx.gitStatus.fileStats) {
+            const { modified, added, deleted, untracked } = ctx.gitStatus.fileStats;
+            const statParts = [];
+            if (modified > 0)
+                statParts.push(`!${modified}`);
+            if (added > 0)
+                statParts.push(`+${added}`);
+            if (deleted > 0)
+                statParts.push(`✘${deleted}`);
+            if (untracked > 0)
+                statParts.push(`?${untracked}`);
+            if (statParts.length > 0) {
+                gitParts.push(` ${statParts.join(' ')}`);
+            }
+        }
+        gitPart = `${magenta('git:(')}${cyan(gitParts.join(''))}${magenta(')')}`;
+    }
+    if (projectPart && gitPart) {
+        parts.push(`${projectPart} ${gitPart}`);
+    }
+    else if (projectPart) {
+        parts.push(projectPart);
+    }
+    else if (gitPart) {
+        parts.push(gitPart);
     }
     // Session name (custom title from /rename, or auto-generated slug)
     if (ctx.transcript.sessionName) {
