@@ -51,5 +51,4 @@ tmp/
 temp/
 *.tmp
 
-# Lock files (keep package-lock.json for npm ci)
-yarn.lock
+# Lock files (keep package-lock.json for npm)
