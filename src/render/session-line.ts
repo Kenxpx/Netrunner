@@ -50,7 +50,7 @@ export function renderSessionLine(ctx: RenderContext): string {
   }
 
   // Project path (SECOND)
-  if (ctx.stdin.cwd) {
+  if (display?.showProject !== false && ctx.stdin.cwd) {
     // Split by both Unix (/) and Windows (\) separators for cross-platform support
     const segments = ctx.stdin.cwd.split(/[/\\]/).filter(Boolean);
     const pathLevels = ctx.config?.pathLevels ?? 1;

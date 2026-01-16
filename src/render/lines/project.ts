@@ -17,7 +17,7 @@ export function renderProjectLine(ctx: RenderContext): string | null {
     parts.push(cyan(`[${modelDisplay}]`));
   }
 
-  if (ctx.stdin.cwd) {
+  if (display?.showProject !== false && ctx.stdin.cwd) {
     const segments = ctx.stdin.cwd.split(/[/\\]/).filter(Boolean);
     const pathLevels = ctx.config?.pathLevels ?? 1;
     const projectPath = segments.length > 0 ? segments.slice(-pathLevels).join('/') : '/';

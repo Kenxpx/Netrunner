@@ -141,6 +141,14 @@ test('renderSessionLine omits project name when cwd is undefined', () => {
   assert.ok(line.includes('[Opus]'));
 });
 
+test('renderSessionLine omits project name when showProject is false', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/Users/jarrod/my-project';
+  ctx.config.display.showProject = false;
+  const line = renderSessionLine(ctx);
+  assert.ok(!line.includes('my-project'), 'should not include project name when showProject is false');
+});
+
 test('renderSessionLine displays git branch when present', () => {
   const ctx = baseContext();
   ctx.stdin.cwd = '/tmp/my-project';
