@@ -45,5 +45,8 @@ export declare function resolveKeychainCredentials(serviceNames: string[], now: 
     } | null;
     shouldBackoff: boolean;
 };
+export declare function getUsageApiTimeoutMs(env?: NodeJS.ProcessEnv): number;
+export declare function isNoProxy(hostname: string, env?: NodeJS.ProcessEnv): boolean;
+export declare function getProxyUrl(hostname: string, env?: NodeJS.ProcessEnv): URL | null;
 export declare function clearCache(homeDir?: string): void;
 //# sourceMappingURL=usage-api.d.ts.map
