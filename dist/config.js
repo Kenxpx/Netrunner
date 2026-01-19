@@ -47,6 +47,13 @@ export const DEFAULT_CONFIG = {
         cacheTtlSeconds: 60,
         failureCacheTtlSeconds: 15,
     },
+    colors: {
+        context: 'green',
+        usage: 'brightBlue',
+        warning: 'yellow',
+        usageWarning: 'brightMagenta',
+        critical: 'red',
+    },
 };
 export function getConfigPath() {
     const homeDir = os.homedir();
@@ -63,6 +70,15 @@ function validateAutocompactBuffer(value) {
 }
 function validateContextValue(value) {
     return value === 'percent' || value === 'tokens' || value === 'remaining';
+}
+function validateColorName(value) {
+    return value === 'red'
+        || value === 'green'
+        || value === 'yellow'
+        || value === 'magenta'
+        || value === 'cyan'
+        || value === 'brightBlue'
+        || value === 'brightMagenta';
 }
 function validateElementOrder(value) {
     if (!Array.isArray(value) || value.length === 0) {
@@ -201,7 +217,24 @@ export function mergeConfig(userConfig) {
         cacheTtlSeconds: validatePositiveInt(migrated.usage?.cacheTtlSeconds, DEFAULT_CONFIG.usage.cacheTtlSeconds),
         failureCacheTtlSeconds: validatePositiveInt(migrated.usage?.failureCacheTtlSeconds, DEFAULT_CONFIG.usage.failureCacheTtlSeconds),
     };
-    return { lineLayout, showSeparators, pathLevels, elementOrder, gitStatus, display, usage };
+    const colors = {
+        context: validateColorName(migrated.colors?.context)
+            ? migrated.colors.context
+            : DEFAULT_CONFIG.colors.context,
+        usage: validateColorName(migrated.colors?.usage)
+            ? migrated.colors.usage
+            : DEFAULT_CONFIG.colors.usage,
+        warning: validateColorName(migrated.colors?.warning)
+            ? migrated.colors.warning
+            : DEFAULT_CONFIG.colors.warning,
+        usageWarning: validateColorName(migrated.colors?.usageWarning)
+            ? migrated.colors.usageWarning
+            : DEFAULT_CONFIG.colors.usageWarning,
+        critical: validateColorName(migrated.colors?.critical)
+            ? migrated.colors.critical
+            : DEFAULT_CONFIG.colors.critical,
+    };
+    return { lineLayout, showSeparators, pathLevels, elementOrder, gitStatus, display, usage, colors };
 }
 export async function loadConfig() {
     const configPath = getConfigPath();

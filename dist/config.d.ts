@@ -2,6 +2,14 @@ export type LineLayoutType = 'compact' | 'expanded';
 export type AutocompactBufferMode = 'enabled' | 'disabled';
 export type ContextValueMode = 'percent' | 'tokens' | 'remaining';
 export type HudElement = 'project' | 'context' | 'usage' | 'environment' | 'tools' | 'agents' | 'todos';
+export type HudColorName = 'red' | 'green' | 'yellow' | 'magenta' | 'cyan' | 'brightBlue' | 'brightMagenta';
+export interface HudColorOverrides {
+    context: HudColorName;
+    usage: HudColorName;
+    warning: HudColorName;
+    usageWarning: HudColorName;
+    critical: HudColorName;
+}
 export declare const DEFAULT_ELEMENT_ORDER: HudElement[];
 export interface HudConfig {
     lineLayout: LineLayoutType;
@@ -38,6 +46,7 @@ export interface HudConfig {
         cacheTtlSeconds: number;
         failureCacheTtlSeconds: number;
     };
+    colors: HudColorOverrides;
 }
 export declare const DEFAULT_CONFIG: HudConfig;
 export declare function getConfigPath(): string;
