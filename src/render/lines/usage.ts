@@ -55,6 +55,9 @@ export function renderUsageLine(ctx: RenderContext): string | null {
         : `5h: ${fiveHourDisplay}`);
 
   const sevenDayThreshold = display?.sevenDayThreshold ?? 80;
+  const syncingSuffix = ctx.usageData.apiError === 'rate-limited'
+    ? ` ${dim('(syncing...)')}`
+    : '';
   if (sevenDay !== null && sevenDay >= sevenDayThreshold) {
     const sevenDayDisplay = formatUsagePercent(sevenDay, colors);
     const sevenDayReset = formatResetTime(ctx.usageData.sevenDayResetAt);
@@ -65,10 +68,10 @@ export function renderUsageLine(ctx: RenderContext): string | null {
       : (sevenDayReset
           ? `7d: ${sevenDayDisplay} (${sevenDayReset})`
           : `7d: ${sevenDayDisplay}`);
-    return `${label} ${fiveHourPart} | ${sevenDayPart}`;
+    return `${label} ${fiveHourPart} | ${sevenDayPart}${syncingSuffix}`;
   }
 
-  return `${label} ${fiveHourPart}`;
+  return `${label} ${fiveHourPart}${syncingSuffix}`;
 }
 
 function formatUsagePercent(percent: number | null, colors?: RenderContext['config']['colors']): string {

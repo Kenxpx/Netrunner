@@ -793,6 +793,27 @@ test('renderSessionLine shows syncing hint when usage API is rate-limited', () =
   assert.ok(!line.includes('rate-limited'), 'should not expose raw rate-limit error key');
 });
 
+test('renderSessionLine keeps stale usage visible while rate-limited', () => {
+  const ctx = baseContext();
+  ctx.usageData = {
+    planName: 'Max',
+    fiveHour: 25,
+    sevenDay: 85,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+    apiError: 'rate-limited',
+  };
+  const compactLine = renderSessionLine(ctx);
+  assert.ok(compactLine.includes('25%'), 'should keep the last successful 5h usage visible');
+  assert.ok(compactLine.includes('85%'), 'should keep the last successful 7d usage visible');
+  assert.ok(compactLine.includes('syncing...'), 'should show syncing hint alongside stale usage');
+
+  const usageLine = renderUsageLine(ctx);
+  assert.ok(usageLine?.includes('25%'), 'expanded usage line should keep stale 5h usage visible');
+  assert.ok(usageLine?.includes('85%'), 'expanded usage line should keep stale 7d usage visible');
+  assert.ok(usageLine?.includes('syncing...'), 'expanded usage line should show syncing hint');
+});
+
 test('renderSessionLine uses custom warning and critical colors for usage states', () => {
   const ctx = baseContext();
   ctx.config.colors = {

@@ -19,6 +19,7 @@ let resolveKeychainCredentials;
 let getUsageApiTimeoutMs;
 let isNoProxy;
 let getProxyUrl;
+let parseRetryAfterSeconds;
 let USAGE_API_USER_AGENT;
 
 function ensureUsageApiDistIsCurrent() {
@@ -54,6 +55,7 @@ before(async () => {
     getUsageApiTimeoutMs,
     isNoProxy,
     getProxyUrl,
+    parseRetryAfterSeconds,
     USAGE_API_USER_AGENT,
   } = await import(`../dist/usage-api.js?cacheBust=${Date.now()}`));
 });
@@ -1133,6 +1135,8 @@ describe('getUsage caching behavior', { concurrency: false }, () => {
       readKeychain: () => null,
     });
     assert.equal(rateLimited?.fiveHour, 25);
+    assert.equal(rateLimited?.apiUnavailable, undefined);
+    assert.equal(rateLimited?.apiError, 'rate-limited');
     assert.equal(fetchCalls, 2);
 
     nowValue += 60_000;
@@ -1143,6 +1147,8 @@ describe('getUsage caching behavior', { concurrency: false }, () => {
       readKeychain: () => null,
     });
     assert.equal(cachedDuringBackoff?.fiveHour, 25);
+    assert.equal(cachedDuringBackoff?.apiUnavailable, undefined);
+    assert.equal(cachedDuringBackoff?.apiError, 'rate-limited');
     assert.equal(fetchCalls, 2);
   });
 
@@ -1391,6 +1397,26 @@ describe('getUsage caching behavior', { concurrency: false }, () => {
     } finally {
       restoreEnvVar('CLAUDE_CONFIG_DIR', originalConfigDir);
     }
+  });
+});
+
+describe('parseRetryAfterSeconds', () => {
+  test('parses numeric Retry-After values', () => {
+    assert.equal(parseRetryAfterSeconds('120', 0), 120);
+  });
+
+  test('parses HTTP-date Retry-After values', () => {
+    const nowMs = Date.parse('2026-03-14T00:00:00Z');
+    assert.equal(
+      parseRetryAfterSeconds('Sat, 14 Mar 2026 00:02:30 GMT', nowMs),
+      150,
+    );
+  });
+
+  test('ignores expired or invalid Retry-After values', () => {
+    const nowMs = Date.parse('2026-03-14T00:00:00Z');
+    assert.equal(parseRetryAfterSeconds('Sat, 14 Mar 2026 00:00:00 GMT', nowMs), undefined);
+    assert.equal(parseRetryAfterSeconds('not-a-date', nowMs), undefined);
   });
 });
 
