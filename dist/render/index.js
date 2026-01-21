@@ -315,7 +315,7 @@ export function render(ctx) {
         ? physicalLines.flatMap(line => wrapLineToWidth(line, terminalWidth))
         : physicalLines;
     for (const line of visibleLines) {
-        const outputLine = `${RESET}${line.replace(/ /g, '\u00A0')}`;
+        const outputLine = `${RESET}${line}`;
         console.log(outputLine);
     }
 }
