@@ -91,9 +91,34 @@ This is a [Claude Code platform limitation](https://github.com/anthropics/claude
 
 ## Step 1: Detect Platform & Runtime
 
-**macOS/Linux** (if `uname -s` returns "Darwin", "Linux", or a MINGW*/MSYS*/CYGWIN* variant):
+First, detect the platform:
+```bash
+uname -s
+```
 
-> **Git Bash/MSYS2/Cygwin users on Windows**: Follow these macOS/Linux instructions, not the Windows section below. Your environment provides bash and Unix-like tools.
+### Platform Detection Logic
+
+| `uname -s` result | Platform | Next Step |
+|-------------------|----------|-----------|
+| Darwin | macOS | Follow **macOS/Linux** instructions |
+| Linux | Linux (native or WSL) | Follow **macOS/Linux** instructions |
+| MINGW* / MSYS* / CYGWIN* | Windows (Git Bash detected) | **IMPORTANT**: Ask user which shell they use |
+| Command fails / not found | Windows (PowerShell) | Follow **Windows (PowerShell)** instructions |
+
+**CRITICAL for Windows detection (MINGW/MSYS/CYGWIN)**: When `uname -s` returns a MINGW/MSYS/CYGWIN variant, this means Claude Code's Bash tool is using Git Bash - but **this does NOT mean the user is actually using Git Bash as their shell**. Most Windows users use PowerShell. You **MUST** ask the user:
+
+Use AskUserQuestion:
+- Question: "You're on Windows. Which shell are you using?"
+- Options: "PowerShell (or Windows Terminal)" / "Git Bash, MSYS2, or Cygwin"
+
+**If PowerShell**: Follow the **Windows (PowerShell)** instructions below.
+**If Git Bash/MSYS2/Cygwin**: Follow the **macOS/Linux** instructions (these bash-based environments work like Unix).
+
+**Fallback when `uname` is unavailable**: If the `uname` command fails or is not found, assume the user is on Windows with PowerShell and follow the **Windows (PowerShell)** instructions.
+
+---
+
+**macOS/Linux** (also for Git Bash/MSYS2/Cygwin users who confirmed their shell):
 
 1. Get plugin path:
    ```bash
@@ -125,7 +150,7 @@ This is a [Claude Code platform limitation](https://github.com/anthropics/claude
    bash -c '"{RUNTIME_PATH}" "$(ls -td ~/.claude/plugins/cache/claude-hud/claude-hud/*/ 2>/dev/null | head -1){SOURCE}"'
    ```
 
-**Windows** (native PowerShell/cmd.exe - if `uname` command is not available):
+**Windows (PowerShell)** (for users who selected PowerShell in the detection step above, or if `uname` command failed):
 
 1. Get plugin path:
    ```powershell
