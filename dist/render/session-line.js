@@ -141,6 +141,9 @@ export function renderSessionLine(ctx) {
             const sevenDay = ctx.usageData.sevenDay;
             const effectiveUsage = Math.max(fiveHour ?? 0, sevenDay ?? 0);
             if (effectiveUsage >= usageThreshold) {
+                const syncingSuffix = ctx.usageData.apiError === 'rate-limited'
+                    ? ` ${dim('(syncing...)')}`
+                    : '';
                 const fiveHourDisplay = formatUsagePercent(fiveHour, colors);
                 const fiveHourReset = formatResetTime(ctx.usageData.fiveHourResetAt);
                 const usageBarEnabled = display?.usageBarEnabled ?? true;
@@ -162,10 +165,10 @@ export function renderSessionLine(ctx) {
                         : (sevenDayReset
                             ? `7d: ${sevenDayDisplay} (${sevenDayReset})`
                             : `7d: ${sevenDayDisplay}`);
-                    parts.push(`${fiveHourPart} | ${sevenDayPart}`);
+                    parts.push(`${fiveHourPart} | ${sevenDayPart}${syncingSuffix}`);
                 }
                 else {
-                    parts.push(fiveHourPart);
+                    parts.push(`${fiveHourPart}${syncingSuffix}`);
                 }
             }
         }

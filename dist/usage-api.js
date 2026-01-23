@@ -72,6 +72,12 @@ function getRateLimitedRetryUntil(cache) {
     }
     return null;
 }
+function withRateLimitedSyncing(data) {
+    return {
+        ...data,
+        apiError: 'rate-limited',
+    };
+}
 function readCacheState(homeDir, now, ttls) {
     try {
         const cachePath = getCachePath(homeDir);
@@ -81,7 +87,7 @@ function readCacheState(homeDir, now, ttls) {
         const cache = JSON.parse(content);
         // Only serve lastGoodData during rate-limit backoff. Other failures should remain visible.
         const displayData = (cache.data.apiError === 'rate-limited' && cache.lastGoodData)
-            ? cache.lastGoodData
+            ? withRateLimitedSyncing(cache.lastGoodData)
             : cache.data;
         const rateLimitedRetryUntil = getRateLimitedRetryUntil(cache);
         if (rateLimitedRetryUntil && now < rateLimitedRetryUntil) {
@@ -326,9 +332,10 @@ export async function getUsage(overrides = {}) {
                     ? staleCache.data
                     : lastGood;
                 if (goodData) {
-                    // Preserve the backoff state in cache, but keep rendering the last successful values.
+                    // Preserve the backoff state in cache, but keep rendering the last successful values
+                    // with a syncing hint so stale data is visible to the user.
                     writeCache(homeDir, failureResult, now, { ...backoffOpts, lastGoodData: goodData });
-                    return goodData;
+                    return withRateLimitedSyncing(goodData);
                 }
             }
             writeCache(homeDir, failureResult, now, backoffOpts);
@@ -834,17 +841,11 @@ function fetchUsageApi(accessToken) {
                     const error = res.statusCode === 429
                         ? 'rate-limited'
                         : res.statusCode ? `http-${res.statusCode}` : 'http-error';
-                    // Parse Retry-After header (seconds) from 429 responses
-                    let retryAfterSec;
-                    if (res.statusCode === 429) {
-                        const raw = res.headers['retry-after'];
-                        if (raw) {
-                            const parsed = parseInt(String(raw), 10);
-                            if (Number.isFinite(parsed) && parsed > 0) {
-                                retryAfterSec = parsed;
-                                debug('Retry-After:', retryAfterSec, 'seconds');
-                            }
-                        }
+                    const retryAfterSec = res.statusCode === 429
+                        ? parseRetryAfterSeconds(res.headers['retry-after'])
+                        : undefined;
+                    if (retryAfterSec) {
+                        debug('Retry-After:', retryAfterSec, 'seconds');
                     }
                     resolve({ data: null, error, retryAfterSec });
                     return;
@@ -870,6 +871,21 @@ function fetchUsageApi(accessToken) {
         });
         req.end();
     });
+}
+export function parseRetryAfterSeconds(raw, nowMs = Date.now()) {
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (!value)
+        return undefined;
+    const parsedSeconds = Number.parseInt(value, 10);
+    if (Number.isFinite(parsedSeconds) && parsedSeconds > 0) {
+        return parsedSeconds;
+    }
+    const retryAtMs = Date.parse(value);
+    if (!Number.isFinite(retryAtMs)) {
+        return undefined;
+    }
+    const retryAfterSeconds = Math.ceil((retryAtMs - nowMs) / 1000);
+    return retryAfterSeconds > 0 ? retryAfterSeconds : undefined;
 }
 // Export for testing
 export function clearCache(homeDir) {
