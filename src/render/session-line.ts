@@ -165,6 +165,10 @@ export function renderSessionLine(ctx: RenderContext): string {
     parts.push(dim(`⏱️  ${ctx.sessionDuration}`));
   }
 
+  if (ctx.extraLabel) {
+    parts.push(dim(ctx.extraLabel));
+  }
+
   let line = parts.join(' | ');
 
   // Token breakdown at high context
