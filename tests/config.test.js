@@ -56,6 +56,12 @@ test('loadConfig returns valid config structure', async () => {
   assert.equal(typeof config.display.showAgents, 'boolean');
   assert.equal(typeof config.display.showTodos, 'boolean');
   assert.equal(typeof config.display.showSessionName, 'boolean');
+  assert.equal(typeof config.colors, 'object');
+  assert.equal(typeof config.colors.context, 'string');
+  assert.equal(typeof config.colors.usage, 'string');
+  assert.equal(typeof config.colors.warning, 'string');
+  assert.equal(typeof config.colors.usageWarning, 'string');
+  assert.equal(typeof config.colors.critical, 'string');
 });
 
 test('getConfigPath returns correct path', () => {
@@ -225,6 +231,33 @@ test('mergeConfig defaults usage to expected values', () => {
   const config = mergeConfig({});
   assert.equal(config.usage.cacheTtlSeconds, 60);
   assert.equal(config.usage.failureCacheTtlSeconds, 15);
+});
+
+test('mergeConfig defaults colors to expected semantic palette', () => {
+  const config = mergeConfig({});
+  assert.equal(config.colors.context, 'green');
+  assert.equal(config.colors.usage, 'brightBlue');
+  assert.equal(config.colors.warning, 'yellow');
+  assert.equal(config.colors.usageWarning, 'brightMagenta');
+  assert.equal(config.colors.critical, 'red');
+});
+
+test('mergeConfig accepts valid color overrides and filters invalid values', () => {
+  const config = mergeConfig({
+    colors: {
+      context: 'cyan',
+      usage: 'magenta',
+      warning: 'brightBlue',
+      usageWarning: 'yellow',
+      critical: 'not-a-color',
+    },
+  });
+
+  assert.equal(config.colors.context, 'cyan');
+  assert.equal(config.colors.usage, 'magenta');
+  assert.equal(config.colors.warning, 'brightBlue');
+  assert.equal(config.colors.usageWarning, 'yellow');
+  assert.equal(config.colors.critical, DEFAULT_CONFIG.colors.critical);
 });
 
 test('mergeConfig accepts custom usage TTL values', () => {

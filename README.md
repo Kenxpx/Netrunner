@@ -150,6 +150,13 @@ You can also edit the config file directly at `~/.claude/plugins/claude-hud/conf
 | `display.showSessionName` | boolean | false | Show session slug or custom title from `/rename` |
 | `usage.cacheTtlSeconds` | number | 60 | How long (seconds) to cache a successful usage API response |
 | `usage.failureCacheTtlSeconds` | number | 15 | How long (seconds) to cache a failed usage API response before retrying |
+| `colors.context` | color name | `green` | Base color for the context bar and context percentage |
+| `colors.usage` | color name | `brightBlue` | Base color for usage bars and percentages below warning thresholds |
+| `colors.warning` | color name | `yellow` | Warning color for context thresholds and usage warning text |
+| `colors.usageWarning` | color name | `brightMagenta` | Warning color for usage bars and percentages near their threshold |
+| `colors.critical` | color name | `red` | Critical color for limit-reached states and critical thresholds |
+
+Supported color names: `red`, `green`, `yellow`, `magenta`, `cyan`, `brightBlue`, `brightMagenta`.
 
 ### Usage Limits (Pro/Max/Team)
 
@@ -195,6 +202,13 @@ To disable, set `display.showUsage` to `false`.
     "showTodos": true,
     "showConfigCounts": true,
     "showDuration": true
+  },
+  "colors": {
+    "context": "cyan",
+    "usage": "cyan",
+    "warning": "yellow",
+    "usageWarning": "magenta",
+    "critical": "red"
   },
   "usage": {
     "cacheTtlSeconds": 120,
