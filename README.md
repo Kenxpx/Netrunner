@@ -103,7 +103,8 @@ Customize your HUD anytime:
 /claude-hud:configure
 ```
 
-The guided flow walks you through customization — no manual editing needed:
+The guided flow handles layout and display toggles. Advanced overrides such as
+custom colors and thresholds are preserved there, but you set them by editing the config file directly:
 
 - **First time setup**: Choose a preset (Full/Essential/Minimal), then fine-tune individual elements
 - **Customize anytime**: Toggle items on/off, adjust git display style, switch layouts
@@ -121,7 +122,8 @@ After choosing a preset, you can turn individual elements on or off.
 
 ### Manual Configuration
 
-You can also edit the config file directly at `~/.claude/plugins/claude-hud/config.json`.
+Edit `~/.claude/plugins/claude-hud/config.json` directly for advanced settings such as `colors.*`,
+`pathLevels`, and threshold overrides. Running `/claude-hud:configure` preserves those manual settings.
 
 ### Options
 
