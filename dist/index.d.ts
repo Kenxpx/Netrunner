@@ -5,6 +5,7 @@ import { countConfigs } from './config-reader.js';
 import { getGitStatus } from './git.js';
 import { getUsage } from './usage-api.js';
 import { loadConfig } from './config.js';
+import { parseExtraCmdArg, runExtraCmd } from './extra-cmd.js';
 export type MainDeps = {
     readStdin: typeof readStdin;
     parseTranscript: typeof parseTranscript;
@@ -12,6 +13,8 @@ export type MainDeps = {
     getGitStatus: typeof getGitStatus;
     getUsage: typeof getUsage;
     loadConfig: typeof loadConfig;
+    parseExtraCmdArg: typeof parseExtraCmdArg;
+    runExtraCmd: typeof runExtraCmd;
     render: typeof render;
     now: () => number;
     log: (...args: unknown[]) => void;

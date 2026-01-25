@@ -71,5 +71,6 @@ export interface RenderContext {
     gitStatus: GitStatus | null;
     usageData: UsageData | null;
     config: HudConfig;
+    extraLabel: string | null;
 }
 //# sourceMappingURL=types.d.ts.map
