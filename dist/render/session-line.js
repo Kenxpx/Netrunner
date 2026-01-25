@@ -147,6 +147,9 @@ export function renderSessionLine(ctx) {
     if (display?.showDuration !== false && ctx.sessionDuration) {
         parts.push(dim(`⏱️  ${ctx.sessionDuration}`));
     }
+    if (ctx.extraLabel) {
+        parts.push(dim(ctx.extraLabel));
+    }
     let line = parts.join(' | ');
     // Token breakdown at high context
     if (display?.showTokenBreakdown !== false && percent >= 85) {
