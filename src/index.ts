@@ -5,6 +5,7 @@ import { countConfigs } from './config-reader.js';
 import { getGitStatus } from './git.js';
 import { getUsage } from './usage-api.js';
 import { loadConfig } from './config.js';
+import { parseExtraCmdArg, runExtraCmd } from './extra-cmd.js';
 import type { RenderContext } from './types.js';
 import { fileURLToPath } from 'node:url';
 
@@ -15,6 +16,8 @@ export type MainDeps = {
   getGitStatus: typeof getGitStatus;
   getUsage: typeof getUsage;
   loadConfig: typeof loadConfig;
+  parseExtraCmdArg: typeof parseExtraCmdArg;
+  runExtraCmd: typeof runExtraCmd;
   render: typeof render;
   now: () => number;
   log: (...args: unknown[]) => void;
@@ -28,6 +31,8 @@ export async function main(overrides: Partial<MainDeps> = {}): Promise<void> {
     getGitStatus,
     getUsage,
     loadConfig,
+    parseExtraCmdArg,
+    runExtraCmd,
     render,
     now: () => Date.now(),
     log: console.log,
@@ -57,6 +62,9 @@ export async function main(overrides: Partial<MainDeps> = {}): Promise<void> {
       ? await deps.getUsage()
       : null;
 
+    const extraCmd = deps.parseExtraCmdArg();
+    const extraLabel = extraCmd ? await deps.runExtraCmd(extraCmd) : null;
+
     const sessionDuration = formatSessionDuration(transcript.sessionStart, deps.now);
 
     const ctx: RenderContext = {
@@ -70,6 +78,7 @@ export async function main(overrides: Partial<MainDeps> = {}): Promise<void> {
       gitStatus,
       usageData,
       config,
+      extraLabel,
     };
 
     deps.render(ctx);
