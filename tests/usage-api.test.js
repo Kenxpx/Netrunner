@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { createServer } from 'node:net';
 
 let tempHome = null;
 
@@ -449,6 +450,57 @@ describe('getUsage', () => {
       assert.equal(existsSync(defaultCachePath), false);
     } finally {
       restoreEnvVar('CLAUDE_CONFIG_DIR', originalConfigDir);
+    }
+  });
+
+  test('sends CONNECT to proxy before any usage API request bytes', async () => {
+    const originalHttpsProxy = process.env.HTTPS_PROXY;
+    const originalUsageTimeout = process.env.CLAUDE_HUD_USAGE_TIMEOUT_MS;
+    await writeCredentials(tempHome, buildCredentials());
+
+    let firstRequestLine = null;
+    let resolveFirstLine = () => {};
+    const firstLinePromise = new Promise((resolve) => {
+      resolveFirstLine = resolve;
+    });
+
+    const proxyServer = createServer((socket) => {
+      let buffered = '';
+      socket.on('data', (chunk) => {
+        buffered += chunk.toString('utf8');
+        const lineEnd = buffered.indexOf('\r\n');
+        if (lineEnd === -1 || firstRequestLine) return;
+
+        firstRequestLine = buffered.slice(0, lineEnd);
+        resolveFirstLine(firstRequestLine);
+        socket.write('HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n');
+        socket.end();
+      });
+    });
+
+    try {
+      await new Promise((resolve) => proxyServer.listen(0, '127.0.0.1', resolve));
+      const address = proxyServer.address();
+      assert.ok(address && typeof address === 'object', 'proxy server should have a bound address');
+      process.env.HTTPS_PROXY = `http://127.0.0.1:${address.port}`;
+      process.env.CLAUDE_HUD_USAGE_TIMEOUT_MS = '2000';
+
+      const result = await getUsage({
+        homeDir: () => tempHome,
+        now: () => 1000,
+        readKeychain: () => null,
+      });
+
+      const requestLine = await Promise.race([
+        firstLinePromise,
+        new Promise((resolve) => setTimeout(() => resolve('timeout'), 5000)),
+      ]);
+      assert.match(requestLine, /^CONNECT api\.anthropic\.com:443 HTTP\/1\.1$/);
+      assert.equal(result?.apiUnavailable, true);
+    } finally {
+      await new Promise((resolve) => proxyServer.close(() => resolve()));
+      restoreEnvVar('HTTPS_PROXY', originalHttpsProxy);
+      restoreEnvVar('CLAUDE_HUD_USAGE_TIMEOUT_MS', originalUsageTimeout);
     }
   });
 });

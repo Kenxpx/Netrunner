@@ -576,7 +576,7 @@ function createProxyTunnelAgent(proxyUrl: URL): https.Agent {
     override createConnection(
       options: https.RequestOptions,
       callback?: (err: Error | null, socket: net.Socket) => void
-    ): net.Socket {
+    ): undefined {
       const targetHost = String(options.host ?? options.hostname ?? 'localhost');
       const targetPort = Number(options.port) || 443;
 
@@ -640,7 +640,12 @@ function createProxyTunnelAgent(proxyUrl: URL): https.Agent {
         proxySocket.on('data', onData);
       });
 
-      return proxySocket;
+      // Must not return the socket here. In Node.js _http_agent.js, createSocket()
+      // calls: `if (newSocket) oncreate(null, newSocket)` — returning a truthy value
+      // causes the HTTP request to be written to the raw proxy socket immediately,
+      // before the CONNECT tunnel is established. Only deliver the final TLS socket
+      // asynchronously via the callback after the CONNECT handshake succeeds.
+      return undefined;
     }
   }();
 }
