@@ -176,20 +176,38 @@ test('renderSessionLine omits project name when cwd is undefined', () => {
   assert.ok(line.includes('[Opus]'));
 });
 
-test('renderSessionLine includes session name when present', () => {
+test('renderSessionLine includes session name when showSessionName is true', () => {
   const ctx = baseContext();
   ctx.stdin.cwd = '/tmp/my-project';
   ctx.transcript.sessionName = 'Renamed Session';
+  ctx.config.display.showSessionName = true;
   const line = renderSessionLine(ctx);
   assert.ok(line.includes('Renamed Session'));
 });
 
-test('renderProjectLine includes session name when present', () => {
+test('renderSessionLine hides session name by default', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/my-project';
+  ctx.transcript.sessionName = 'Renamed Session';
+  const line = renderSessionLine(ctx);
+  assert.ok(!line.includes('Renamed Session'));
+});
+
+test('renderProjectLine includes session name when showSessionName is true', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/my-project';
+  ctx.transcript.sessionName = 'Renamed Session';
+  ctx.config.display.showSessionName = true;
+  const line = renderProjectLine(ctx);
+  assert.ok(line?.includes('Renamed Session'));
+});
+
+test('renderProjectLine hides session name by default', () => {
   const ctx = baseContext();
   ctx.stdin.cwd = '/tmp/my-project';
   ctx.transcript.sessionName = 'Renamed Session';
   const line = renderProjectLine(ctx);
-  assert.ok(line?.includes('Renamed Session'));
+  assert.ok(!line?.includes('Renamed Session'));
 });
 
 test('renderSessionLine omits project name when showProject is false', () => {
