@@ -9,6 +9,7 @@ import {
   getUsageApiTimeoutMs,
   isNoProxy,
   getProxyUrl,
+  USAGE_API_USER_AGENT,
 } from '../dist/usage-api.js';
 import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -503,6 +504,10 @@ describe('getUsage', () => {
       restoreEnvVar('CLAUDE_HUD_USAGE_TIMEOUT_MS', originalUsageTimeout);
     }
   });
+});
+
+test('usage API user agent matches the working Claude Code identifier', () => {
+  assert.equal(USAGE_API_USER_AGENT, 'claude-code/2.1');
 });
 
 describe('getKeychainServiceName', () => {
