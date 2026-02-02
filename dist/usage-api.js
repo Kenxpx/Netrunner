@@ -16,6 +16,7 @@ const CACHE_FAILURE_TTL_MS = 15_000; // 15 seconds for failed requests
 const KEYCHAIN_TIMEOUT_MS = 3000;
 const KEYCHAIN_BACKOFF_MS = 60_000; // Backoff on keychain failures to avoid re-prompting
 const USAGE_API_TIMEOUT_MS_DEFAULT = 15_000;
+export const USAGE_API_USER_AGENT = 'claude-code/2.1';
 function getCachePath(homeDir) {
     return path.join(getHudPluginDir(homeDir), '.usage-cache.json');
 }
@@ -542,7 +543,7 @@ function fetchUsageApi(accessToken) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'anthropic-beta': 'oauth-2025-04-20',
-                'User-Agent': 'claude-hud/1.0',
+                'User-Agent': USAGE_API_USER_AGENT,
             },
             timeout: timeoutMs,
             agent: proxyUrl ? createProxyTunnelAgent(proxyUrl) : undefined,
