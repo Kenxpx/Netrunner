@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: build-dist
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,6 +28,9 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+
+      - name: Verify build output
+        run: test -f dist/index.js || exit 1
 
       - name: Commit dist/
         run: |
