@@ -2,10 +2,21 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { getHudPluginDir } from './claude-config-dir.js';
+export const DEFAULT_ELEMENT_ORDER = [
+    'project',
+    'context',
+    'usage',
+    'environment',
+    'tools',
+    'agents',
+    'todos',
+];
+const KNOWN_ELEMENTS = new Set(DEFAULT_ELEMENT_ORDER);
 export const DEFAULT_CONFIG = {
     lineLayout: 'expanded',
     showSeparators: false,
     pathLevels: 1,
+    elementOrder: [...DEFAULT_ELEMENT_ORDER],
     gitStatus: {
         enabled: true,
         showDirty: true,
@@ -48,6 +59,25 @@ function validateAutocompactBuffer(value) {
 }
 function validateContextValue(value) {
     return value === 'percent' || value === 'tokens' || value === 'remaining';
+}
+function validateElementOrder(value) {
+    if (!Array.isArray(value) || value.length === 0) {
+        return [...DEFAULT_ELEMENT_ORDER];
+    }
+    const seen = new Set();
+    const elementOrder = [];
+    for (const item of value) {
+        if (typeof item !== 'string' || !KNOWN_ELEMENTS.has(item)) {
+            continue;
+        }
+        const element = item;
+        if (seen.has(element)) {
+            continue;
+        }
+        seen.add(element);
+        elementOrder.push(element);
+    }
+    return elementOrder.length > 0 ? elementOrder : [...DEFAULT_ELEMENT_ORDER];
 }
 function migrateConfig(userConfig) {
     const migrated = { ...userConfig };
@@ -93,6 +123,7 @@ export function mergeConfig(userConfig) {
     const pathLevels = validatePathLevels(migrated.pathLevels)
         ? migrated.pathLevels
         : DEFAULT_CONFIG.pathLevels;
+    const elementOrder = validateElementOrder(migrated.elementOrder);
     const gitStatus = {
         enabled: typeof migrated.gitStatus?.enabled === 'boolean'
             ? migrated.gitStatus.enabled
@@ -157,7 +188,7 @@ export function mergeConfig(userConfig) {
         sevenDayThreshold: validateThreshold(migrated.display?.sevenDayThreshold, 100),
         environmentThreshold: validateThreshold(migrated.display?.environmentThreshold, 100),
     };
-    return { lineLayout, showSeparators, pathLevels, gitStatus, display };
+    return { lineLayout, showSeparators, pathLevels, elementOrder, gitStatus, display };
 }
 export async function loadConfig() {
     const configPath = getConfigPath();

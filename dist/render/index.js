@@ -1,3 +1,4 @@
+import { DEFAULT_ELEMENT_ORDER } from '../config.js';
 import { renderSessionLine } from './session-line.js';
 import { renderToolsLine } from './tools-line.js';
 import { renderAgentsLine } from './agents-line.js';
@@ -244,6 +245,7 @@ function wrapLineToWidth(line, maxWidth) {
 function makeSeparator(length) {
     return dim('─'.repeat(Math.max(length, 1)));
 }
+const ACTIVITY_ELEMENTS = new Set(['tools', 'agents', 'todos']);
 function collectActivityLines(ctx) {
     const activityLines = [];
     const display = ctx.config?.display;
@@ -267,6 +269,25 @@ function collectActivityLines(ctx) {
     }
     return activityLines;
 }
+function renderElementLine(ctx, element) {
+    const display = ctx.config?.display;
+    switch (element) {
+        case 'project':
+            return renderProjectLine(ctx);
+        case 'context':
+            return renderIdentityLine(ctx);
+        case 'usage':
+            return renderUsageLine(ctx);
+        case 'environment':
+            return renderEnvironmentLine(ctx);
+        case 'tools':
+            return display?.showTools === false ? null : renderToolsLine(ctx);
+        case 'agents':
+            return display?.showAgents === false ? null : renderAgentsLine(ctx);
+        case 'todos':
+            return display?.showTodos === false ? null : renderTodosLine(ctx);
+    }
+}
 function renderCompact(ctx) {
     const lines = [];
     const sessionLine = renderSessionLine(ctx);
@@ -276,22 +297,41 @@ function renderCompact(ctx) {
     return lines;
 }
 function renderExpanded(ctx) {
+    const elementOrder = ctx.config?.elementOrder ?? DEFAULT_ELEMENT_ORDER;
+    const seen = new Set();
     const lines = [];
-    const projectLine = renderProjectLine(ctx);
-    if (projectLine) {
-        lines.push(projectLine);
-    }
-    const identityLine = renderIdentityLine(ctx);
-    const usageLine = renderUsageLine(ctx);
-    if (identityLine && usageLine) {
-        lines.push(`${identityLine} \u2502 ${usageLine}`);
-    }
-    else if (identityLine) {
-        lines.push(identityLine);
-    }
-    const environmentLine = renderEnvironmentLine(ctx);
-    if (environmentLine) {
-        lines.push(environmentLine);
+    for (let index = 0; index < elementOrder.length; index += 1) {
+        const element = elementOrder[index];
+        if (seen.has(element)) {
+            continue;
+        }
+        const nextElement = elementOrder[index + 1];
+        if ((element === 'context' && nextElement === 'usage' && !seen.has('usage'))
+            || (element === 'usage' && nextElement === 'context' && !seen.has('context'))) {
+            seen.add(element);
+            seen.add(nextElement);
+            const firstLine = renderElementLine(ctx, element);
+            const secondLine = renderElementLine(ctx, nextElement);
+            if (firstLine && secondLine) {
+                lines.push({ line: `${firstLine} │ ${secondLine}`, isActivity: false });
+            }
+            else if (firstLine) {
+                lines.push({ line: firstLine, isActivity: false });
+            }
+            else if (secondLine) {
+                lines.push({ line: secondLine, isActivity: false });
+            }
+            continue;
+        }
+        seen.add(element);
+        const line = renderElementLine(ctx, element);
+        if (!line) {
+            continue;
+        }
+        lines.push({
+            line,
+            isActivity: ACTIVITY_ELEMENTS.has(element),
+        });
     }
     return lines;
 }
@@ -299,17 +339,34 @@ export function render(ctx) {
     const lineLayout = ctx.config?.lineLayout ?? 'expanded';
     const showSeparators = ctx.config?.showSeparators ?? false;
     const terminalWidth = getTerminalWidth();
-    const headerLines = lineLayout === 'expanded'
-        ? renderExpanded(ctx)
-        : renderCompact(ctx);
-    const activityLines = collectActivityLines(ctx);
-    const lines = [...headerLines];
-    if (showSeparators && activityLines.length > 0) {
-        const maxWidth = Math.max(...headerLines.map(visualLength), 20);
-        const separatorWidth = terminalWidth ? Math.min(maxWidth, terminalWidth) : maxWidth;
-        lines.push(makeSeparator(separatorWidth));
+    let lines;
+    if (lineLayout === 'expanded') {
+        const renderedLines = renderExpanded(ctx);
+        lines = renderedLines.map(({ line }) => line);
+        if (showSeparators) {
+            const firstActivityIndex = renderedLines.findIndex(({ isActivity }) => isActivity);
+            if (firstActivityIndex > 0) {
+                const separatorBaseWidth = Math.max(...renderedLines
+                    .slice(0, firstActivityIndex)
+                    .map(({ line }) => visualLength(line)), 20);
+                const separatorWidth = terminalWidth
+                    ? Math.min(separatorBaseWidth, terminalWidth)
+                    : separatorBaseWidth;
+                lines.splice(firstActivityIndex, 0, makeSeparator(separatorWidth));
+            }
+        }
     }
-    lines.push(...activityLines);
+    else {
+        const headerLines = renderCompact(ctx);
+        const activityLines = collectActivityLines(ctx);
+        lines = [...headerLines];
+        if (showSeparators && activityLines.length > 0) {
+            const maxWidth = Math.max(...headerLines.map(visualLength), 20);
+            const separatorWidth = terminalWidth ? Math.min(maxWidth, terminalWidth) : maxWidth;
+            lines.push(makeSeparator(separatorWidth));
+        }
+        lines.push(...activityLines);
+    }
     const physicalLines = lines.flatMap(line => line.split('\n'));
     const visibleLines = terminalWidth
         ? physicalLines.flatMap(line => wrapLineToWidth(line, terminalWidth))
