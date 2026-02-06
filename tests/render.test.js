@@ -580,8 +580,8 @@ test('render adds separator line when showSeparators is true and activity exists
     console.log = originalLog;
   }
 
-  assert.equal(logs.length, 1, 'should render a single line');
-  assert.ok(logs.some(l => l.includes('---')), 'should include separator marker');
+  assert.ok(logs.length > 1, 'should render multiple lines');
+  assert.ok(logs.some(l => l.includes('─')), 'should include separator line');
 });
 
 test('render omits separator when showSeparators is true but no activity', () => {
@@ -597,8 +597,7 @@ test('render omits separator when showSeparators is true but no activity', () =>
     console.log = originalLog;
   }
 
-  assert.equal(logs.length, 1, 'should render a single line');
-  assert.ok(!logs.some(l => l.includes('---')), 'should not include separator');
+  assert.ok(!logs.some(l => l.includes('─')), 'should not include separator');
 });
 
 // fileStats tests

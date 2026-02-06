@@ -2,7 +2,31 @@
 
 All notable changes to Claude HUD will be documented in this file.
 
-## [Unreleased]
+## [0.0.7] - 2026-02-06
+
+### Changed
+- **Redesigned default layout** — clean 2-line display replaces the previous multi-line default
+  - Line 1: `[Opus | Max] │ my-project git:(main*)`
+  - Line 2: `Context █████░░░░░ 45% │ Usage ██░░░░░░░░ 25% (1h 30m / 5h)`
+- Model bracket moved to project line (line 1)
+- Context and usage bars combined onto a single line with `│` separator
+- Shortened labels: "Context Window" → "Context", "Usage Limits" → "Usage"
+- Consistent `dim()` styling on both labels
+- All optional features hidden by default: tools, agents, todos, duration, config counts
+- Bedrock provider detection (#111)
+- Output speed display (#110)
+- Token context display option (#108)
+- Seven-day usage threshold config (#107)
+
+### Added
+- Setup onboarding now offers optional features (tools, agents & todos, session info) before finishing
+- `display.showSpeed` config option for output token speed
+
+### Fixed
+- Show API failure reason in usage display (#109)
+- Support task todo updates in transcript parsing (#106)
+- Keep HUD to one line in compact mode (#105)
+- Use Platform context instead of uname for setup detection (#95)
 
 ---
 

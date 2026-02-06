@@ -18,16 +18,18 @@ export function renderUsageLine(ctx: RenderContext): string | null {
     return null;
   }
 
+  const label = dim('Usage');
+
   if (ctx.usageData.apiUnavailable) {
     const errorHint = formatUsageError(ctx.usageData.apiError);
-    return yellow(`usage: ⚠${errorHint}`);
+    return `${label} ${yellow(`⚠${errorHint}`)}`;
   }
 
   if (isLimitReached(ctx.usageData)) {
     const resetTime = ctx.usageData.fiveHour === 100
       ? formatResetTime(ctx.usageData.fiveHourResetAt)
       : formatResetTime(ctx.usageData.sevenDayResetAt);
-    return red(`⚠ Limit reached${resetTime ? ` (resets ${resetTime})` : ''}`);
+    return `${label} ${red(`⚠ Limit reached${resetTime ? ` (resets ${resetTime})` : ''}`)}`;
   }
 
   const threshold = display?.usageThreshold ?? 0;
@@ -60,10 +62,10 @@ export function renderUsageLine(ctx: RenderContext): string | null {
           ? `${quotaBar(sevenDay)} ${sevenDayDisplay} (${sevenDayReset} / 7d)`
           : `${quotaBar(sevenDay)} ${sevenDayDisplay}`)
       : `7d: ${sevenDayDisplay}`;
-    return `${fiveHourPart} | ${sevenDayPart}`;
+    return `${label} ${fiveHourPart} | ${sevenDayPart}`;
   }
 
-  return fiveHourPart;
+  return `${label} ${fiveHourPart}`;
 }
 
 function formatUsagePercent(percent: number | null): string {

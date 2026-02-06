@@ -73,27 +73,31 @@ src/
 ├── types.ts           # TypeScript interfaces
 └── render/
     ├── index.ts       # Main render coordinator
-    ├── session-line.ts   # Line 1: model, context, project, git, usage
-    ├── tools-line.ts     # Line 2: tool activity
-    ├── agents-line.ts    # Line 3: agent status
-    ├── todos-line.ts     # Line 4: todo progress
-    └── colors.ts         # ANSI color helpers
+    ├── session-line.ts   # Compact mode: single line with all info
+    ├── tools-line.ts     # Tool activity (opt-in)
+    ├── agents-line.ts    # Agent status (opt-in)
+    ├── todos-line.ts     # Todo progress (opt-in)
+    ├── colors.ts         # ANSI color helpers
+    └── lines/
+        ├── index.ts      # Barrel export
+        ├── project.ts    # Line 1: model bracket + project + git
+        ├── identity.ts   # Line 2a: context bar
+        ├── usage.ts      # Line 2b: usage bar (combined with identity)
+        └── environment.ts # Config counts (opt-in)
 ```
 
-### Output Format
+### Output Format (default expanded layout)
 
 ```
-[Opus | Pro] █████░░░░░ 45% | my-project git:(main) | 2 CLAUDE.md | 5h: 25% | ⏱️ 5m
-◐ Edit: auth.ts | ✓ Read ×3 | ✓ Grep ×2
-◐ explore [haiku]: Finding auth code (2m 15s)
-▸ Fix authentication bug (2/5)
+[Opus | Max] │ my-project git:(main*)
+Context █████░░░░░ 45% │ Usage ██░░░░░░░░ 25% (1h 30m / 5h)
 ```
 
-Lines are conditionally shown:
-- Line 1 (session): Always shown
-- Line 2 (tools): Shown if any tools used
-- Line 3 (agents): Shown only if agents active
-- Line 4 (todos): Shown only if todos exist
+Lines 1-2 always shown. Additional lines are opt-in via config:
+- Tools line (`showTools`): ◐ Edit: auth.ts | ✓ Read ×3
+- Agents line (`showAgents`): ◐ explore [haiku]: Finding auth code
+- Todos line (`showTodos`): ▸ Fix authentication bug (2/5)
+- Environment line (`showConfigCounts`): 2 CLAUDE.md | 4 rules
 
 ### Context Thresholds
 
