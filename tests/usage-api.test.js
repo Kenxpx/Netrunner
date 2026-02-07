@@ -506,8 +506,8 @@ describe('getUsage', () => {
   });
 });
 
-test('usage API user agent matches the working Claude Code identifier', () => {
-  assert.equal(USAGE_API_USER_AGENT, 'claude-code/2.1');
+test('usage API user agent uses a non-empty claude-hud identifier', () => {
+  assert.match(USAGE_API_USER_AGENT, /^claude-hud(?:\/|$)/);
 });
 
 describe('getKeychainServiceName', () => {
@@ -642,6 +642,106 @@ describe('getUsage caching behavior', () => {
     clearCache(tempHome);
     await getUsage({ homeDir: () => tempHome, fetchApi, now: () => 2000, readKeychain: () => null });
     assert.equal(fetchCalls, 2);
+  });
+
+  test('deduplicates concurrent refreshes when cache is missing', async () => {
+    await writeCredentials(tempHome, buildCredentials());
+
+    let fetchCalls = 0;
+    let releaseFetch = () => {};
+    let signalFetchStarted = () => {};
+    const fetchStarted = new Promise((resolve) => {
+      signalFetchStarted = resolve;
+    });
+    const fetchGate = new Promise((resolve) => {
+      releaseFetch = resolve;
+    });
+
+    const fetchApi = async () => {
+      fetchCalls += 1;
+      signalFetchStarted();
+      await fetchGate;
+      return buildApiResult({
+        data: buildApiResponse({
+          five_hour: {
+            utilization: 42,
+            resets_at: '2026-01-06T15:00:00Z',
+          },
+        }),
+      });
+    };
+
+    const first = getUsage({ homeDir: () => tempHome, fetchApi, now: () => 1000, readKeychain: () => null });
+    await fetchStarted;
+
+    const second = getUsage({ homeDir: () => tempHome, fetchApi, now: () => 1000, readKeychain: () => null });
+    const third = getUsage({ homeDir: () => tempHome, fetchApi, now: () => 1000, readKeychain: () => null });
+
+    releaseFetch();
+    const results = await Promise.all([first, second, third]);
+
+    assert.equal(fetchCalls, 1);
+    assert.deepEqual(results.map((result) => result?.fiveHour), [42, 42, 42]);
+  });
+
+  test('returns stale cache while another process refreshes expired data', async () => {
+    await writeCredentials(tempHome, buildCredentials());
+
+    let nowValue = 1000;
+    await getUsage({
+      homeDir: () => tempHome,
+      fetchApi: async () => buildApiResult(),
+      now: () => nowValue,
+      readKeychain: () => null,
+    });
+
+    nowValue += 61_000;
+
+    let fetchCalls = 0;
+    let releaseFetch = () => {};
+    let signalFetchStarted = () => {};
+    const fetchStarted = new Promise((resolve) => {
+      signalFetchStarted = resolve;
+    });
+    const fetchGate = new Promise((resolve) => {
+      releaseFetch = resolve;
+    });
+
+    const fetchApi = async () => {
+      fetchCalls += 1;
+      signalFetchStarted();
+      await fetchGate;
+      return buildApiResult({
+        data: buildApiResponse({
+          five_hour: {
+            utilization: 88,
+            resets_at: '2026-01-06T16:00:00Z',
+          },
+        }),
+      });
+    };
+
+    const leader = getUsage({
+      homeDir: () => tempHome,
+      fetchApi,
+      now: () => nowValue,
+      readKeychain: () => null,
+    });
+    await fetchStarted;
+
+    const follower = await getUsage({
+      homeDir: () => tempHome,
+      fetchApi,
+      now: () => nowValue,
+      readKeychain: () => null,
+    });
+
+    assert.equal(fetchCalls, 1);
+    assert.equal(follower?.fiveHour, 25);
+
+    releaseFetch();
+    const refreshed = await leader;
+    assert.equal(refreshed?.fiveHour, 88);
   });
 });
 
