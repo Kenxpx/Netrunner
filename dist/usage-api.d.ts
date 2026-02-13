@@ -14,7 +14,7 @@ interface UsageApiResult {
     data: UsageApiResponse | null;
     error?: string;
 }
-export declare const USAGE_API_USER_AGENT = "claude-hud";
+export declare const USAGE_API_USER_AGENT = "claude-code/2.1";
 export type UsageApiDeps = {
     homeDir: () => string;
     fetchApi: (accessToken: string) => Promise<UsageApiResult>;
