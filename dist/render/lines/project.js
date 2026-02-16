@@ -1,5 +1,5 @@
 import { getModelName, getProviderLabel } from '../../stdin.js';
-import { cyan, magenta, yellow } from '../colors.js';
+import { cyan, magenta, yellow, red } from '../colors.js';
 export function renderProjectLine(ctx) {
     const display = ctx.config?.display;
     const parts = [];
@@ -7,7 +7,9 @@ export function renderProjectLine(ctx) {
         const model = getModelName(ctx.stdin);
         const providerLabel = getProviderLabel(ctx.stdin);
         const planName = display?.showUsage !== false ? ctx.usageData?.planName : undefined;
-        const planDisplay = providerLabel ?? planName;
+        const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+        const billingLabel = hasApiKey ? red('API') : planName;
+        const planDisplay = providerLabel ?? billingLabel;
         const modelDisplay = planDisplay ? `${model} | ${planDisplay}` : model;
         parts.push(cyan(`[${modelDisplay}]`));
     }
