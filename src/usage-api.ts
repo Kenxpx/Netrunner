@@ -45,21 +45,48 @@ interface UsageApiResult {
 // File-based cache (HUD runs as new process each render, so in-memory cache won't persist)
 const CACHE_TTL_MS = 60_000; // 60 seconds
 const CACHE_FAILURE_TTL_MS = 15_000; // 15 seconds for failed requests
+const CACHE_LOCK_STALE_MS = 30_000;
+const CACHE_LOCK_WAIT_MS = 2_000;
+const CACHE_LOCK_POLL_MS = 50;
 const KEYCHAIN_TIMEOUT_MS = 3000;
 const KEYCHAIN_BACKOFF_MS = 60_000; // Backoff on keychain failures to avoid re-prompting
 const USAGE_API_TIMEOUT_MS_DEFAULT = 15_000;
-export const USAGE_API_USER_AGENT = 'claude-code/2.1';
+export const USAGE_API_USER_AGENT = 'claude-hud';
 
 interface CacheFile {
   data: UsageData;
   timestamp: number;
 }
 
+interface CacheState {
+  data: UsageData;
+  timestamp: number;
+  isFresh: boolean;
+}
+
+type CacheLockStatus = 'acquired' | 'busy' | 'unsupported';
+
 function getCachePath(homeDir: string): string {
   return path.join(getHudPluginDir(homeDir), '.usage-cache.json');
 }
 
-function readCache(homeDir: string, now: number): UsageData | null {
+function getCacheLockPath(homeDir: string): string {
+  return path.join(getHudPluginDir(homeDir), '.usage-cache.lock');
+}
+
+function hydrateCacheData(data: UsageData): UsageData {
+  // JSON.stringify converts Date to ISO string, so we need to reconvert on read.
+  // new Date() handles both Date objects and ISO strings safely.
+  if (data.fiveHourResetAt) {
+    data.fiveHourResetAt = new Date(data.fiveHourResetAt);
+  }
+  if (data.sevenDayResetAt) {
+    data.sevenDayResetAt = new Date(data.sevenDayResetAt);
+  }
+  return data;
+}
+
+function readCacheState(homeDir: string, now: number): CacheState | null {
   try {
     const cachePath = getCachePath(homeDir);
     if (!fs.existsSync(cachePath)) return null;
@@ -69,22 +96,19 @@ function readCache(homeDir: string, now: number): UsageData | null {
 
     // Check TTL - use shorter TTL for failure results
     const ttl = cache.data.apiUnavailable ? CACHE_FAILURE_TTL_MS : CACHE_TTL_MS;
-    if (now - cache.timestamp >= ttl) return null;
-
-    // JSON.stringify converts Date to ISO string, so we need to reconvert on read.
-    // new Date() handles both Date objects and ISO strings safely.
-    const data = cache.data;
-    if (data.fiveHourResetAt) {
-      data.fiveHourResetAt = new Date(data.fiveHourResetAt);
-    }
-    if (data.sevenDayResetAt) {
-      data.sevenDayResetAt = new Date(data.sevenDayResetAt);
-    }
-
-    return data;
+    return {
+      data: hydrateCacheData(cache.data),
+      timestamp: cache.timestamp,
+      isFresh: now - cache.timestamp < ttl,
+    };
   } catch {
     return null;
   }
+}
+
+function readCache(homeDir: string, now: number): UsageData | null {
+  const cache = readCacheState(homeDir, now);
+  return cache?.isFresh ? cache.data : null;
 }
 
 function writeCache(homeDir: string, data: UsageData, timestamp: number): void {
@@ -101,6 +125,87 @@ function writeCache(homeDir: string, data: UsageData, timestamp: number): void {
   } catch {
     // Ignore cache write failures
   }
+}
+
+function readLockTimestamp(lockPath: string): number | null {
+  try {
+    if (!fs.existsSync(lockPath)) return null;
+    const raw = fs.readFileSync(lockPath, 'utf8').trim();
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function tryAcquireCacheLock(homeDir: string): CacheLockStatus {
+  const lockPath = getCacheLockPath(homeDir);
+  const cacheDir = path.dirname(lockPath);
+
+  try {
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+
+    const fd = fs.openSync(lockPath, 'wx');
+    try {
+      fs.writeFileSync(fd, String(Date.now()), 'utf8');
+    } finally {
+      fs.closeSync(fd);
+    }
+    return 'acquired';
+  } catch (error) {
+    const maybeError = error as NodeJS.ErrnoException;
+    if (maybeError.code !== 'EEXIST') {
+      debug('Usage cache lock unavailable, continuing without coordination:', maybeError.message);
+      return 'unsupported';
+    }
+  }
+
+  const lockTimestamp = readLockTimestamp(lockPath);
+  if (lockTimestamp != null && Date.now() - lockTimestamp > CACHE_LOCK_STALE_MS) {
+    try {
+      fs.unlinkSync(lockPath);
+    } catch {
+      return 'busy';
+    }
+    return tryAcquireCacheLock(homeDir);
+  }
+
+  return 'busy';
+}
+
+function releaseCacheLock(homeDir: string): void {
+  try {
+    const lockPath = getCacheLockPath(homeDir);
+    if (fs.existsSync(lockPath)) {
+      fs.unlinkSync(lockPath);
+    }
+  } catch {
+    // Ignore lock cleanup failures
+  }
+}
+
+async function waitForFreshCache(
+  homeDir: string,
+  now: () => number,
+  timeoutMs: number = CACHE_LOCK_WAIT_MS
+): Promise<UsageData | null> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, CACHE_LOCK_POLL_MS));
+    const cached = readCache(homeDir, now());
+    if (cached) {
+      return cached;
+    }
+
+    if (!fs.existsSync(getCacheLockPath(homeDir))) {
+      break;
+    }
+  }
+
+  return readCache(homeDir, now());
 }
 
 // Dependency injection for testing
@@ -132,12 +237,27 @@ export async function getUsage(overrides: Partial<UsageApiDeps> = {}): Promise<U
   const homeDir = deps.homeDir();
 
   // Check file-based cache first
-  const cached = readCache(homeDir, now);
-  if (cached) {
-    return cached;
+  const cacheState = readCacheState(homeDir, now);
+  if (cacheState?.isFresh) {
+    return cacheState.data;
   }
 
+  let holdsCacheLock = false;
+  const lockStatus = tryAcquireCacheLock(homeDir);
+  if (lockStatus === 'busy') {
+    if (cacheState) {
+      return cacheState.data;
+    }
+    return await waitForFreshCache(homeDir, deps.now);
+  }
+  holdsCacheLock = lockStatus === 'acquired';
+
   try {
+    const refreshedCache = readCache(homeDir, deps.now());
+    if (refreshedCache) {
+      return refreshedCache;
+    }
+
     const credentials = readCredentials(homeDir, now, deps.readKeychain);
     if (!credentials) {
       return null;
@@ -192,6 +312,10 @@ export async function getUsage(overrides: Partial<UsageApiDeps> = {}): Promise<U
   } catch (error) {
     debug('getUsage failed:', error);
     return null;
+  } finally {
+    if (holdsCacheLock) {
+      releaseCacheLock(homeDir);
+    }
   }
 }
 
@@ -718,6 +842,10 @@ export function clearCache(homeDir?: string): void {
       const cachePath = getCachePath(homeDir);
       if (fs.existsSync(cachePath)) {
         fs.unlinkSync(cachePath);
+      }
+      const lockPath = getCacheLockPath(homeDir);
+      if (fs.existsSync(lockPath)) {
+        fs.unlinkSync(lockPath);
       }
     } catch {
       // Ignore
