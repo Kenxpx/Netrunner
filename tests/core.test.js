@@ -40,8 +40,8 @@ test('getContextPercent returns raw percentage without buffer', () => {
   assert.equal(percent, 28);
 });
 
-test('getBufferedPercent includes 22.5% buffer', () => {
-  // 55000 / 200000 = 27.5%, + 22.5% buffer = 50%
+test('getBufferedPercent includes 16.5% buffer', () => {
+  // 55000 / 200000 = 27.5%, + 16.5% buffer = 44%
   const percent = getBufferedPercent({
     context_window: {
       context_window_size: 200000,
@@ -53,7 +53,7 @@ test('getBufferedPercent includes 22.5% buffer', () => {
     },
   });
 
-  assert.equal(percent, 50);
+  assert.equal(percent, 44);
 });
 
 test('getContextPercent handles missing input tokens', () => {
@@ -72,9 +72,9 @@ test('getContextPercent handles missing input tokens', () => {
 });
 
 test('getBufferedPercent scales to larger context windows', () => {
-  // Test with 1M context window: 45000 tokens + (1000000 * 0.225) buffer
+  // Test with 1M context window: 45000 tokens + (1000000 * 0.165) buffer
   // Raw: 45000 / 1000000 = 4.5% → 5%
-  // Buffered: (45000 + 225000) / 1000000 = 27% → 27%
+  // Buffered: (45000 + 165000) / 1000000 = 21% → 21%
   const rawPercent = getContextPercent({
     context_window: {
       context_window_size: 1000000,
@@ -89,7 +89,7 @@ test('getBufferedPercent scales to larger context windows', () => {
   });
 
   assert.equal(rawPercent, 5);
-  assert.equal(bufferedPercent, 27);
+  assert.equal(bufferedPercent, 21);
 });
 
 // Native percentage tests (Claude Code v2.1.6+)
@@ -108,7 +108,7 @@ test('getBufferedPercent prefers native used_percentage when available', () => {
   const percent = getBufferedPercent({
     context_window: {
       context_window_size: 200000,
-      current_usage: { input_tokens: 55000 }, // would be 50% buffered
+      current_usage: { input_tokens: 55000 }, // would be 44% buffered
       used_percentage: 47, // native value takes precedence
     },
   });
@@ -134,7 +134,7 @@ test('getBufferedPercent falls back when native is null', () => {
       used_percentage: null,
     },
   });
-  assert.equal(percent, 50); // buffered calculation
+  assert.equal(percent, 44); // buffered calculation
 });
 
 test('native percentage handles zero correctly', () => {
