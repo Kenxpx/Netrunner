@@ -53,6 +53,25 @@ const KEYCHAIN_BACKOFF_MS = 60_000; // Backoff on keychain failures to avoid re-
 const USAGE_API_TIMEOUT_MS_DEFAULT = 15_000;
 export const USAGE_API_USER_AGENT = 'claude-code/2.1';
 
+/**
+ * Check if user is using a custom API endpoint instead of the default Anthropic API.
+ * When using custom providers (e.g., via cc-switch), the OAuth usage API is not applicable.
+ */
+function isUsingCustomApiEndpoint(env: NodeJS.ProcessEnv = process.env): boolean {
+  const baseUrl = env.ANTHROPIC_BASE_URL?.trim() || env.ANTHROPIC_API_BASE_URL?.trim();
+
+  // No custom endpoint configured - using default Anthropic API
+  if (!baseUrl) {
+    return false;
+  }
+
+  try {
+    return new URL(baseUrl).origin !== 'https://api.anthropic.com';
+  } catch {
+    return true;
+  }
+}
+
 interface CacheFile {
   data: UsageData;
   timestamp: number;
@@ -235,6 +254,12 @@ export async function getUsage(overrides: Partial<UsageApiDeps> = {}): Promise<U
   const deps = { ...defaultDeps, ...overrides };
   const now = deps.now();
   const homeDir = deps.homeDir();
+
+  // Skip usage API if user is using a custom provider
+  if (isUsingCustomApiEndpoint()) {
+    debug('Skipping usage API: custom API endpoint configured');
+    return null;
+  }
 
   // Check file-based cache first
   const cacheState = readCacheState(homeDir, now);
