@@ -60,44 +60,22 @@ Claude HUD gives you better insights into what's happening in your Claude Code s
 | **Agent tracking** | See which subagents are running and what they're doing |
 | **Todo progress** | Track task completion in real-time |
 
-## What Each Line Shows
+## What You See
 
-The HUD is rendered as a single statusline; the sections below are shown inline, separated by `|`.
+### Default (2 lines)
+```
+[Opus | Max] │ my-project git:(main*)
+Context █████░░░░░ 45% │ Usage ██░░░░░░░░ 25% (1h 30m / 5h)
+```
+- **Line 1** — Model, plan name (or `Bedrock`), project path, git branch
+- **Line 2** — Context bar (green → yellow → red) and usage rate limits
 
-### Session Info
+### Optional lines (enable via `/claude-hud:configure`)
 ```
-[Opus | Pro] █████░░░░░ 45% | my-project git:(main) | 2 CLAUDE.md | 5h: 25% | ⏱️ 5m
+◐ Edit: auth.ts | ✓ Read ×3 | ✓ Grep ×2        ← Tools activity
+◐ explore [haiku]: Finding auth code (2m 15s)    ← Agent status
+▸ Fix authentication bug (2/5)                   ← Todo progress
 ```
-- **Model** — Current model in use (shown first)
-- **Plan name** — Your subscription tier (Pro, Max, Team) when usage enabled, or `Bedrock` when using AWS Bedrock models
-- **Context bar** — Visual meter with color coding (green → yellow → red as it fills), with percent or tokens based on config
-- **Project path** — Configurable 1-3 directory levels (default: 1)
-- **Git branch** — Current branch name (configurable on/off)
-- **Config counts** — CLAUDE.md files, rules, MCPs, and hooks loaded
-- **Usage limits** — 5-hour rate limit percentage (opt-in, Pro/Max/Team only; hidden for Bedrock)
-- **Duration** — How long the session has been running
-
-### Tool Activity
-```
-✓ TaskOutput ×2 | ✓ mcp_context7 ×1 | ✓ Glob ×1 | ✓ Skill ×1
-```
-- **Running tools** show a spinner with the target file
-- **Completed tools** aggregate by type with counts
-
-### Agent Status
-```
-✓ Explore: Explore home directory structure (5s)
-✓ open-source-librarian: Research React hooks patterns (2s)
-```
-- **Agent type** and what it's working on
-- **Elapsed time** for each agent
-
-### Todo Progress
-```
-✓ All todos complete (5/5)
-```
-- **Current task** or completion status
-- **Progress counter** (completed/total)
 
 ---
 
@@ -149,7 +127,7 @@ You can also edit the config file directly at `~/.claude/plugins/claude-hud/conf
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `layout` | string | `default` | Layout style: `default` or `separators` |
+| `lineLayout` | string | `expanded` | Layout: `expanded` (multi-line) or `compact` (single line) |
 | `pathLevels` | 1-3 | 1 | Directory levels to show in project path |
 | `gitStatus.enabled` | boolean | true | Show git branch in HUD |
 | `gitStatus.showDirty` | boolean | true | Show `*` for uncommitted changes |
@@ -157,29 +135,29 @@ You can also edit the config file directly at `~/.claude/plugins/claude-hud/conf
 | `gitStatus.showFileStats` | boolean | false | Show file change counts `!M +A ✘D ?U` |
 | `display.showModel` | boolean | true | Show model name `[Opus]` |
 | `display.showContextBar` | boolean | true | Show visual context bar `████░░░░░░` |
-| `display.contextValue` | `percent` \| `tokens` | `percent` | Context usage display format (`45%` or `45k/200k`) |
-| `display.showConfigCounts` | boolean | true | Show CLAUDE.md, rules, MCPs, hooks counts |
-| `display.showDuration` | boolean | true | Show session duration `⏱️ 5m` |
+| `display.contextValue` | `percent` \| `tokens` | `percent` | Context display format (`45%` or `45k/200k`) |
+| `display.showConfigCounts` | boolean | false | Show CLAUDE.md, rules, MCPs, hooks counts |
+| `display.showDuration` | boolean | false | Show session duration `⏱️ 5m` |
 | `display.showSpeed` | boolean | false | Show output token speed `out: 42.1 tok/s` |
 | `display.showUsage` | boolean | true | Show usage limits (Pro/Max/Team only) |
-| `display.usageBarEnabled` | boolean | true | Display usage as visual bar (`██░░ 25%`) instead of text (`5h: 25%`) |
+| `display.usageBarEnabled` | boolean | true | Display usage as visual bar instead of text |
 | `display.sevenDayThreshold` | 0-100 | 80 | Show 7-day usage when >= threshold (0 = always) |
 | `display.showTokenBreakdown` | boolean | true | Show token details at high context (85%+) |
-| `display.showTools` | boolean | true | Show tools activity line |
-| `display.showAgents` | boolean | true | Show agents activity line |
-| `display.showTodos` | boolean | true | Show todos progress line |
+| `display.showTools` | boolean | false | Show tools activity line |
+| `display.showAgents` | boolean | false | Show agents activity line |
+| `display.showTodos` | boolean | false | Show todos progress line |
 
 ### Usage Limits (Pro/Max/Team)
 
-Usage display is **enabled by default** for Claude Pro, Max, and Team subscribers. It shows your rate limit consumption directly in the HUD.
+Usage display is **enabled by default** for Claude Pro, Max, and Team subscribers. It shows your rate limit consumption on line 2 alongside the context bar.
 
-When enabled, you'll see your 5-hour usage percentage. The 7-day percentage appears when above the `display.sevenDayThreshold` (default 80%):
+The 7-day percentage appears when above the `display.sevenDayThreshold` (default 80%):
 
 ```
-[Opus | Pro] █████░░░░░ 45% | my-project | 5h: 25% | 7d: 85%
+Context █████░░░░░ 45% │ Usage ██░░░░░░░░ 25% (1h 30m / 5h) | ██████████ 85% (2d / 7d)
 ```
 
-To disable usage display, set `display.showUsage` to `false` in your config.
+To disable, set `display.showUsage` to `false`.
 
 **Requirements:**
 - Claude Pro, Max, or Team subscription (not available for API users)
@@ -191,23 +169,11 @@ To disable usage display, set `display.showUsage` to `false` in your config.
 - API users see no usage display (they have pay-per-token, not rate limits)
 - AWS Bedrock models display `Bedrock` and hide usage limits (usage is managed in AWS)
 
-### Layout Options
-
-**Default layout** — Single-line HUD:
-```
-[Opus] ████░░░░░░ 42% | my-project git:(main) | 2 rules | ⏱️ 5m | ✓ Read ×3 | ✓ Edit ×1
-```
-
-**Separators layout** — Inline separator before activity:
-```
-[Opus] ████░░░░░░ 42% | my-project git:(main) | 2 rules | ⏱️ 5m | --- | ✓ Read ×3 | ✓ Edit ×1
-```
-
 ### Example Configuration
 
 ```json
 {
-  "layout": "default",
+  "lineLayout": "expanded",
   "pathLevels": 2,
   "gitStatus": {
     "enabled": true,
@@ -216,43 +182,36 @@ To disable usage display, set `display.showUsage` to `false` in your config.
     "showFileStats": true
   },
   "display": {
-    "showModel": true,
-    "showContextBar": true,
-    "showConfigCounts": true,
-    "showDuration": true,
-    "showUsage": true,
-    "usageBarEnabled": true,
-    "showTokenBreakdown": true,
     "showTools": true,
     "showAgents": true,
-    "showTodos": true
+    "showTodos": true,
+    "showConfigCounts": true,
+    "showDuration": true
   }
 }
 ```
 
 ### Display Examples
 
-**1 level (default):** `[Opus] 45% | my-project git:(main) | ...`
+**1 level (default):** `[Opus] │ my-project git:(main)`
 
-**2 levels:** `[Opus] 45% | apps/my-project git:(main) | ...`
+**2 levels:** `[Opus] │ apps/my-project git:(main)`
 
-**3 levels:** `[Opus] 45% | dev/apps/my-project git:(main) | ...`
+**3 levels:** `[Opus] │ dev/apps/my-project git:(main)`
 
-**With dirty indicator:** `[Opus] 45% | my-project git:(main*) | ...`
+**With dirty indicator:** `[Opus] │ my-project git:(main*)`
 
-**With ahead/behind:** `[Opus] 45% | my-project git:(main ↑2 ↓1) | ...`
+**With ahead/behind:** `[Opus] │ my-project git:(main ↑2 ↓1)`
 
-**With file stats:** `[Opus] 45% | my-project git:(main* !3 +1 ?2) | ...`
+**With file stats:** `[Opus] │ my-project git:(main* !3 +1 ?2)`
 - `!` = modified files, `+` = added/staged, `✘` = deleted, `?` = untracked
 - Counts of 0 are omitted for cleaner display
-
-**Minimal display (only context %):** Configure `showModel`, `showContextBar`, `showConfigCounts`, `showDuration` to `false`
 
 ### Troubleshooting
 
 **Config not applying?**
 - Check for JSON syntax errors: invalid JSON silently falls back to defaults
-- Ensure valid values: `pathLevels` must be 1, 2, or 3; `layout` must be `default` or `separators`
+- Ensure valid values: `pathLevels` must be 1, 2, or 3; `lineLayout` must be `expanded` or `compact`
 - Delete config and run `/claude-hud:configure` to regenerate
 
 **Git status missing?**
@@ -260,8 +219,8 @@ To disable usage display, set `display.showUsage` to `false` in your config.
 - Check `gitStatus.enabled` is not `false` in config
 
 **Tool/agent/todo lines missing?**
-- These only appear when there's activity to show
-- Check `display.showTools`, `display.showAgents`, `display.showTodos` in config
+- These are hidden by default — enable with `showTools`, `showAgents`, `showTodos` in config
+- They also only appear when there's activity to show
 
 ---
 

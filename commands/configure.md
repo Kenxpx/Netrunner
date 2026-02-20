@@ -139,10 +139,10 @@ Info items (Counts, Tokens, Usage, Speed, Duration) can be turned off via "Reset
 - Info: Counts OFF, Tokens OFF, Usage OFF, Duration ON
 - Git: ON (with dirty indicator)
 
-**Minimal** (core only):
+**Minimal** (core only — this is the default):
 - Activity: Tools OFF, Agents OFF, Todos OFF
 - Info: Counts OFF, Tokens OFF, Usage OFF, Duration OFF
-- Git: OFF
+- Git: ON (with dirty indicator)
 
 ---
 
@@ -236,17 +236,15 @@ Changes:
 
 2. **Preview of HUD (Expanded layout):**
 ```
-[Opus | Pro] ████░░░░░ 45% | ⏱️ 5m
-my-project git:(main*)
-2 CLAUDE.md | 4 rules | 3 MCPs
-5h: 25% (1h 30m)
+[Opus | Pro] │ my-project git:(main*)
+Context ████░░░░░ 45% │ Usage ██░░░░░░░░ 25% (1h 30m / 5h)
 ◐ Edit: file.ts | ✓ Read ×3
 ▸ Fix auth bug (2/5)
 ```
 
 **Preview of HUD (Compact layout):**
 ```
-[Opus | Pro] ████░░░░░ 45% | my-project git:(main*) | 2 CLAUDE.md | 5h: 25% | ⏱️ 5m
+[Opus | Pro] ████░░░░░ 45% | my-project git:(main*) | 5h: 25% | ⏱️ 5m
 ◐ Edit: file.ts | ✓ Read ×3
 ▸ Fix auth bug (2/5)
 ```
