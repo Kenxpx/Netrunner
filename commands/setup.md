@@ -185,11 +185,38 @@ If a write fails with `File has been unexpectedly modified`, re-read the file an
 
 **Note**: The generated command dynamically finds and runs the latest installed plugin version. Updates are automatic - no need to re-run setup after plugin updates. If the HUD suddenly stops working, re-run `/claude-hud:setup` to verify the plugin is still installed.
 
-## Step 4: Verify With User
+## Step 4: Optional Features
+
+After the statusLine is applied, ask the user if they'd like to enable additional HUD features beyond the default 2-line display.
 
 Use AskUserQuestion:
-- Question: "The HUD should now appear below your input field. Is it working?"
-- Options: "Yes, I see it" / "No, something's wrong"
+- header: "Extras"
+- question: "Enable any optional HUD features? (all hidden by default)"
+- multiSelect: true
+- options:
+  - "Tools activity" — Shows running/completed tools (◐ Edit: file.ts | ✓ Read ×3)
+  - "Agents & Todos" — Shows subagent status and todo progress
+  - "Session info" — Shows session duration and config counts (CLAUDE.md, rules, MCPs)
+
+**If user selects any options**, write `~/.claude/plugins/claude-hud/config.json` (create directories if needed):
+
+| Selection | Config keys |
+|-----------|------------|
+| Tools activity | `display.showTools: true` |
+| Agents & Todos | `display.showAgents: true, display.showTodos: true` |
+| Session info | `display.showDuration: true, display.showConfigCounts: true` |
+
+Merge with existing config if the file already exists. Only write keys the user selected — don't write `false` for unselected items (defaults handle that).
+
+**If user selects nothing** (or picks "Other" and says skip/none), do not create a config file. The defaults are fine.
+
+---
+
+## Step 5: Verify & Finish
+
+Use AskUserQuestion:
+- Question: "Setup complete! The HUD should appear below your input field. Is it working?"
+- Options: "Yes, it's working" / "No, something's wrong"
 
 **If yes**: Ask the user if they'd like to ⭐ star the claude-hud repository on GitHub to support the project. If they agree and `gh` CLI is available, run: `gh api -X PUT /user/starred/jarrodwatts/claude-hud`. Only run the star command if they explicitly say yes.
 
