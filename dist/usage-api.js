@@ -54,7 +54,7 @@ function hydrateCacheData(data) {
     }
     return data;
 }
-function readCacheState(homeDir, now) {
+function readCacheState(homeDir, now, ttls) {
     try {
         const cachePath = getCachePath(homeDir);
         if (!fs.existsSync(cachePath))
@@ -62,7 +62,7 @@ function readCacheState(homeDir, now) {
         const content = fs.readFileSync(cachePath, 'utf8');
         const cache = JSON.parse(content);
         // Check TTL - use shorter TTL for failure results
-        const ttl = cache.data.apiUnavailable ? CACHE_FAILURE_TTL_MS : CACHE_TTL_MS;
+        const ttl = cache.data.apiUnavailable ? ttls.failureCacheTtlMs : ttls.cacheTtlMs;
         return {
             data: hydrateCacheData(cache.data),
             timestamp: cache.timestamp,
@@ -73,8 +73,8 @@ function readCacheState(homeDir, now) {
         return null;
     }
 }
-function readCache(homeDir, now) {
-    const cache = readCacheState(homeDir, now);
+function readCache(homeDir, now, ttls) {
+    const cache = readCacheState(homeDir, now, ttls);
     return cache?.isFresh ? cache.data : null;
 }
 function writeCache(homeDir, data, timestamp) {
@@ -149,11 +149,11 @@ function releaseCacheLock(homeDir) {
         // Ignore lock cleanup failures
     }
 }
-async function waitForFreshCache(homeDir, now, timeoutMs = CACHE_LOCK_WAIT_MS) {
+async function waitForFreshCache(homeDir, now, ttls, timeoutMs = CACHE_LOCK_WAIT_MS) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, CACHE_LOCK_POLL_MS));
-        const cached = readCache(homeDir, now());
+        const cached = readCache(homeDir, now(), ttls);
         if (cached) {
             return cached;
         }
@@ -161,13 +161,14 @@ async function waitForFreshCache(homeDir, now, timeoutMs = CACHE_LOCK_WAIT_MS) {
             break;
         }
     }
-    return readCache(homeDir, now());
+    return readCache(homeDir, now(), ttls);
 }
 const defaultDeps = {
     homeDir: () => os.homedir(),
     fetchApi: fetchUsageApi,
     now: () => Date.now(),
     readKeychain: readKeychainCredentials,
+    ttls: { cacheTtlMs: CACHE_TTL_MS, failureCacheTtlMs: CACHE_FAILURE_TTL_MS },
 };
 /**
  * Get OAuth usage data from Anthropic API.
@@ -175,7 +176,8 @@ const defaultDeps = {
  * Returns { apiUnavailable: true, ... } if API call fails (to show warning in HUD).
  *
  * Uses file-based cache since HUD runs as a new process each render (~300ms).
- * Cache TTL: 60s for success, 15s for failures.
+ * Cache TTL is configurable via usage.cacheTtlSeconds / usage.failureCacheTtlSeconds in config.json
+ * (defaults: 60s for success, 15s for failures).
  */
 export async function getUsage(overrides = {}) {
     const deps = { ...defaultDeps, ...overrides };
@@ -187,7 +189,7 @@ export async function getUsage(overrides = {}) {
         return null;
     }
     // Check file-based cache first
-    const cacheState = readCacheState(homeDir, now);
+    const cacheState = readCacheState(homeDir, now, deps.ttls);
     if (cacheState?.isFresh) {
         return cacheState.data;
     }
@@ -197,11 +199,11 @@ export async function getUsage(overrides = {}) {
         if (cacheState) {
             return cacheState.data;
         }
-        return await waitForFreshCache(homeDir, deps.now);
+        return await waitForFreshCache(homeDir, deps.now, deps.ttls);
     }
     holdsCacheLock = lockStatus === 'acquired';
     try {
-        const refreshedCache = readCache(homeDir, deps.now());
+        const refreshedCache = readCache(homeDir, deps.now(), deps.ttls);
         if (refreshedCache) {
             return refreshedCache;
         }

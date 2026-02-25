@@ -15,6 +15,10 @@ interface UsageApiResult {
     error?: string;
 }
 export declare const USAGE_API_USER_AGENT = "claude-code/2.1";
+type CacheTtls = {
+    cacheTtlMs: number;
+    failureCacheTtlMs: number;
+};
 export type UsageApiDeps = {
     homeDir: () => string;
     fetchApi: (accessToken: string) => Promise<UsageApiResult>;
@@ -23,6 +27,7 @@ export type UsageApiDeps = {
         accessToken: string;
         subscriptionType: string;
     } | null;
+    ttls: CacheTtls;
 };
 /**
  * Get OAuth usage data from Anthropic API.
@@ -30,7 +35,8 @@ export type UsageApiDeps = {
  * Returns { apiUnavailable: true, ... } if API call fails (to show warning in HUD).
  *
  * Uses file-based cache since HUD runs as a new process each render (~300ms).
- * Cache TTL: 60s for success, 15s for failures.
+ * Cache TTL is configurable via usage.cacheTtlSeconds / usage.failureCacheTtlSeconds in config.json
+ * (defaults: 60s for success, 15s for failures).
  */
 export declare function getUsage(overrides?: Partial<UsageApiDeps>): Promise<UsageData | null>;
 /**
