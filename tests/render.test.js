@@ -160,7 +160,8 @@ test('renderSessionLine supports remaining-based context display', () => {
   ctx.stdin.context_window.context_window_size = 200000;
   ctx.stdin.context_window.current_usage.input_tokens = 12345;
   const line = renderSessionLine(ctx);
-  assert.ok(line.includes('77%'), 'should include remaining percentage');
+  // 12345/200k = 6.17% raw, scale ≈ 0.026, buffer ≈ 858 → 7% buffered → 93% remaining
+  assert.ok(line.includes('93%'), 'should include remaining percentage');
 });
 
 test('render expanded layout supports remaining-based context display', () => {
@@ -179,7 +180,8 @@ test('render expanded layout supports remaining-based context display', () => {
     console.log = originalLog;
   }
 
-  assert.ok(logs.some(line => line.includes('Context') && line.includes('77%')), 'expected remaining percentage on context line');
+  // 12345/200k = 6.17% raw, scale ≈ 0.026, buffer ≈ 858 → 7% buffered → 93% remaining
+  assert.ok(logs.some(line => line.includes('Context') && line.includes('93%')), 'expected remaining percentage on context line');
 });
 
 test('renderSessionLine omits project name when cwd is undefined', () => {
@@ -733,22 +735,34 @@ test('renderSessionLine hides usage when showUsage config is false (hybrid toggl
 
 test('renderSessionLine uses buffered percent when autocompactBuffer is enabled', () => {
   const ctx = baseContext();
-  // 10000 tokens / 200000 = 5% raw, + 16.5% buffer = 22% buffered (rounded)
-  ctx.stdin.context_window.current_usage.input_tokens = 10000;
+  // 60000 tokens / 200000 = 30% raw, scale = (0.30 - 0.05) / (0.50 - 0.05) ≈ 0.556
+  // buffer = 200000 * 0.165 * 0.556 ≈ 18333, (60000 + 18333) / 200000 = 39.2% → 39%
+  ctx.stdin.context_window.current_usage.input_tokens = 60000;
   ctx.config.display.autocompactBuffer = 'enabled';
   const line = renderSessionLine(ctx);
-  // Should show ~22% (buffered), not 5% (raw)
-  assert.ok(line.includes('22%'), `expected buffered percent 22%, got: ${line}`);
+  // Should show 39% (buffered), not 30% (raw)
+  assert.ok(line.includes('39%'), `expected buffered percent 39%, got: ${line}`);
 });
 
 test('renderSessionLine uses raw percent when autocompactBuffer is disabled', () => {
   const ctx = baseContext();
-  // 10000 tokens / 200000 = 5% raw
-  ctx.stdin.context_window.current_usage.input_tokens = 10000;
+  // 60000 tokens / 200000 = 30% raw
+  ctx.stdin.context_window.current_usage.input_tokens = 60000;
   ctx.config.display.autocompactBuffer = 'disabled';
   const line = renderSessionLine(ctx);
-  // Should show 5% (raw), not 22% (buffered)
-  assert.ok(line.includes('5%'), `expected raw percent 5%, got: ${line}`);
+  // Should show 30% (raw), not 39% (buffered)
+  assert.ok(line.includes('30%'), `expected raw percent 30%, got: ${line}`);
+});
+
+test('renderSessionLine avoids inflated startup percentage before native context data exists', () => {
+  const ctx = baseContext();
+  ctx.stdin.context_window.current_usage = {};
+  ctx.stdin.context_window.used_percentage = null;
+  ctx.config.display.autocompactBuffer = 'enabled';
+
+  const line = renderSessionLine(ctx);
+
+  assert.ok(line.includes('0%'), `expected startup percent 0%, got: ${line}`);
 });
 
 test('render adds separator line when showSeparators is true and activity exists', () => {
