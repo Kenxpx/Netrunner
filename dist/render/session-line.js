@@ -26,7 +26,9 @@ export function renderSessionLine(ctx) {
     // Plan name only shows if showUsage is enabled (respects hybrid toggle)
     const providerLabel = getProviderLabel(ctx.stdin);
     const planName = display?.showUsage !== false ? ctx.usageData?.planName : undefined;
-    const planDisplay = providerLabel ?? planName;
+    const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+    const billingLabel = hasApiKey ? red('API') : planName;
+    const planDisplay = providerLabel ?? billingLabel;
     const modelDisplay = planDisplay ? `${model} | ${planDisplay}` : model;
     if (display?.showModel !== false && display?.showContextBar !== false) {
         parts.push(`${cyan(`[${modelDisplay}]`)} ${bar} ${contextValueDisplay}`);
