@@ -186,6 +186,43 @@ test('parseTranscript aggregates tools, agents, and todos', async () => {
   assert.equal(result.sessionStart?.toISOString(), '2024-01-01T00:00:00.000Z');
 });
 
+test('parseTranscript prefers custom title over slug for session name', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'claude-hud-'));
+  const filePath = path.join(dir, 'session-name-custom-title.jsonl');
+  const lines = [
+    JSON.stringify({ type: 'user', slug: 'auto-slug-1' }),
+    JSON.stringify({ type: 'custom-title', customTitle: 'My Renamed Session' }),
+    JSON.stringify({ type: 'assistant', slug: 'auto-slug-2' }),
+  ];
+
+  await writeFile(filePath, lines.join('\n'), 'utf8');
+
+  try {
+    const result = await parseTranscript(filePath);
+    assert.equal(result.sessionName, 'My Renamed Session');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('parseTranscript falls back to latest slug when custom title is missing', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'claude-hud-'));
+  const filePath = path.join(dir, 'session-name-slug.jsonl');
+  const lines = [
+    JSON.stringify({ type: 'user', slug: 'auto-slug-1' }),
+    JSON.stringify({ type: 'assistant', slug: 'auto-slug-2' }),
+  ];
+
+  await writeFile(filePath, lines.join('\n'), 'utf8');
+
+  try {
+    const result = await parseTranscript(filePath);
+    assert.equal(result.sessionName, 'auto-slug-2');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('parseTranscript returns empty result when file is missing', async () => {
   const result = await parseTranscript('/tmp/does-not-exist.jsonl');
   assert.equal(result.tools.length, 0);
