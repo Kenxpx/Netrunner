@@ -51,8 +51,8 @@ export function getContextPercent(stdin) {
     return Math.min(100, Math.round((totalTokens / size) * 100));
 }
 export function getBufferedPercent(stdin) {
-    // Prefer native percentage (v2.1.6+) - accurate and matches /context
-    // Native percentage already accounts for context correctly, no buffer needed
+    // Prefer native percentage (v2.1.6+) so the HUD matches Claude Code's
+    // own context output. The buffered fallback only approximates older versions.
     const native = getNativePercent(stdin);
     if (native !== null) {
         return native;
@@ -63,7 +63,13 @@ export function getBufferedPercent(stdin) {
         return 0;
     }
     const totalTokens = getTotalTokens(stdin);
-    const buffer = size * AUTOCOMPACT_BUFFER_PERCENT;
+    // Scale buffer by raw usage: no buffer at ≤5% (e.g. after /clear),
+    // full buffer at ≥50%. Autocompact doesn't kick in at very low usage.
+    const rawRatio = totalTokens / size;
+    const LOW = 0.05;
+    const HIGH = 0.50;
+    const scale = Math.min(1, Math.max(0, (rawRatio - LOW) / (HIGH - LOW)));
+    const buffer = size * AUTOCOMPACT_BUFFER_PERCENT * scale;
     return Math.min(100, Math.round(((totalTokens + buffer) / size) * 100));
 }
 export function getModelName(stdin) {
