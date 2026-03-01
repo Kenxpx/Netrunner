@@ -60,8 +60,8 @@ function captureRenderLines(ctx) {
 
 test('renderSessionLine adds token breakdown when context is high', () => {
   const ctx = baseContext();
-  // For 90%: (tokens + 45000) / 200000 = 0.9 → tokens = 135000
-  ctx.stdin.context_window.current_usage.input_tokens = 135000;
+  // For 90%: (tokens + 33000) / 200000 = 0.9 → tokens = 147000
+  ctx.stdin.context_window.current_usage.input_tokens = 147000;
   const line = renderSessionLine(ctx);
   assert.ok(line.includes('in:'), 'expected token breakdown');
   assert.ok(line.includes('cache:'), 'expected cache breakdown');
@@ -71,22 +71,22 @@ test('renderSessionLine includes duration and formats large tokens', () => {
   const ctx = baseContext();
   ctx.sessionDuration = '1m';
   // Use 1M context, need 85%+ to show breakdown
-  // For 85%: (tokens + 45000) / 1000000 = 0.85 → tokens = 805000
+  // For 85%: (tokens + 165000) / 1000000 = 0.85 → tokens = 685000
   ctx.stdin.context_window.context_window_size = 1000000;
-  ctx.stdin.context_window.current_usage.input_tokens = 805000;
+  ctx.stdin.context_window.current_usage.input_tokens = 685000;
   ctx.stdin.context_window.current_usage.cache_read_input_tokens = 1500;
   const line = renderSessionLine(ctx);
   assert.ok(line.includes('⏱️'));
-  assert.ok(line.includes('805k') || line.includes('805.0k'), 'expected large input token display');
+  assert.ok(line.includes('685k') || line.includes('685.0k'), 'expected large input token display');
   assert.ok(line.includes('2k'), 'expected cache token display');
 });
 
 test('renderSessionLine handles missing input tokens and cache creation usage', () => {
   const ctx = baseContext();
-  // For 90%: (tokens + 45000) / 200000 = 0.9 → tokens = 135000 (all from cache)
+  // For 90%: (tokens + 33000) / 200000 = 0.9 → tokens = 147000 (all from cache)
   ctx.stdin.context_window.context_window_size = 200000;
   ctx.stdin.context_window.current_usage = {
-    cache_creation_input_tokens: 135000,
+    cache_creation_input_tokens: 147000,
   };
   const line = renderSessionLine(ctx);
   assert.ok(line.includes('90%'));
@@ -95,10 +95,10 @@ test('renderSessionLine handles missing input tokens and cache creation usage', 
 
 test('renderSessionLine handles missing cache token fields', () => {
   const ctx = baseContext();
-  // For 90%: (tokens + 45000) / 200000 = 0.9 → tokens = 135000
+  // For 90%: (tokens + 33000) / 200000 = 0.9 → tokens = 147000
   ctx.stdin.context_window.context_window_size = 200000;
   ctx.stdin.context_window.current_usage = {
-    input_tokens: 135000,
+    input_tokens: 147000,
   };
   const line = renderSessionLine(ctx);
   assert.ok(line.includes('cache: 0'));
@@ -160,7 +160,7 @@ test('renderSessionLine supports remaining-based context display', () => {
   ctx.stdin.context_window.context_window_size = 200000;
   ctx.stdin.context_window.current_usage.input_tokens = 12345;
   const line = renderSessionLine(ctx);
-  assert.ok(line.includes('71%'), 'should include remaining percentage');
+  assert.ok(line.includes('77%'), 'should include remaining percentage');
 });
 
 test('render expanded layout supports remaining-based context display', () => {
@@ -179,7 +179,7 @@ test('render expanded layout supports remaining-based context display', () => {
     console.log = originalLog;
   }
 
-  assert.ok(logs.some(line => line.includes('Context') && line.includes('71%')), 'expected remaining percentage on context line');
+  assert.ok(logs.some(line => line.includes('Context') && line.includes('77%')), 'expected remaining percentage on context line');
 });
 
 test('renderSessionLine omits project name when cwd is undefined', () => {
@@ -733,12 +733,12 @@ test('renderSessionLine hides usage when showUsage config is false (hybrid toggl
 
 test('renderSessionLine uses buffered percent when autocompactBuffer is enabled', () => {
   const ctx = baseContext();
-  // 10000 tokens / 200000 = 5% raw, + 22.5% buffer = 28% buffered (rounded)
+  // 10000 tokens / 200000 = 5% raw, + 16.5% buffer = 22% buffered (rounded)
   ctx.stdin.context_window.current_usage.input_tokens = 10000;
   ctx.config.display.autocompactBuffer = 'enabled';
   const line = renderSessionLine(ctx);
-  // Should show ~28% (buffered), not 5% (raw)
-  assert.ok(line.includes('28%'), `expected buffered percent 28%, got: ${line}`);
+  // Should show ~22% (buffered), not 5% (raw)
+  assert.ok(line.includes('22%'), `expected buffered percent 22%, got: ${line}`);
 });
 
 test('renderSessionLine uses raw percent when autocompactBuffer is disabled', () => {
@@ -747,7 +747,7 @@ test('renderSessionLine uses raw percent when autocompactBuffer is disabled', ()
   ctx.stdin.context_window.current_usage.input_tokens = 10000;
   ctx.config.display.autocompactBuffer = 'disabled';
   const line = renderSessionLine(ctx);
-  // Should show 5% (raw), not 28% (buffered)
+  // Should show 5% (raw), not 22% (buffered)
   assert.ok(line.includes('5%'), `expected raw percent 5%, got: ${line}`);
 });
 
