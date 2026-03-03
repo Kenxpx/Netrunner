@@ -27,7 +27,7 @@ test('loadConfig returns valid config structure', async () => {
   assert.equal(typeof config.display, 'object');
   assert.equal(typeof config.display.showModel, 'boolean');
   assert.equal(typeof config.display.showContextBar, 'boolean');
-  assert.ok(['percent', 'tokens'].includes(config.display.contextValue), 'contextValue should be valid');
+  assert.ok(['percent', 'tokens', 'remaining'].includes(config.display.contextValue), 'contextValue should be valid');
   assert.equal(typeof config.display.showConfigCounts, 'boolean');
   assert.equal(typeof config.display.showDuration, 'boolean');
   assert.equal(typeof config.display.showSpeed, 'boolean');
@@ -86,4 +86,22 @@ test('both layout and lineLayout present -> layout ignored', () => {
   // When lineLayout is already present, migration should not run
   assert.equal(config.lineLayout, 'expanded');
   assert.equal(config.showSeparators, DEFAULT_CONFIG.showSeparators);
+});
+
+test('mergeConfig accepts contextValue=remaining', () => {
+  const config = mergeConfig({
+    display: {
+      contextValue: 'remaining',
+    },
+  });
+  assert.equal(config.display.contextValue, 'remaining');
+});
+
+test('mergeConfig falls back to default for invalid contextValue', () => {
+  const config = mergeConfig({
+    display: {
+      contextValue: 'invalid-mode',
+    },
+  });
+  assert.equal(config.display.contextValue, DEFAULT_CONFIG.display.contextValue);
 });
