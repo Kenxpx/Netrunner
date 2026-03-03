@@ -200,6 +200,9 @@ function formatContextValue(ctx, percent, mode) {
         }
         return formatTokens(totalTokens);
     }
+    if (mode === 'remaining') {
+        return `${Math.max(0, 100 - percent)}%`;
+    }
     return `${percent}%`;
 }
 function formatUsagePercent(percent) {
