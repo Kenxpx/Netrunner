@@ -14,6 +14,7 @@ export const DEFAULT_CONFIG = {
     },
     display: {
         showModel: true,
+        showProject: true,
         showContextBar: true,
         contextValue: 'percent',
         showConfigCounts: false,
@@ -109,6 +110,9 @@ export function mergeConfig(userConfig) {
         showModel: typeof migrated.display?.showModel === 'boolean'
             ? migrated.display.showModel
             : DEFAULT_CONFIG.display.showModel,
+        showProject: typeof migrated.display?.showProject === 'boolean'
+            ? migrated.display.showProject
+            : DEFAULT_CONFIG.display.showProject,
         showContextBar: typeof migrated.display?.showContextBar === 'boolean'
             ? migrated.display.showContextBar
             : DEFAULT_CONFIG.display.showContextBar,

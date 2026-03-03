@@ -13,6 +13,7 @@ export interface HudConfig {
     };
     display: {
         showModel: boolean;
+        showProject: boolean;
         showContextBar: boolean;
         contextValue: ContextValueMode;
         showConfigCounts: boolean;
