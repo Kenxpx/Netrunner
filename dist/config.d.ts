@@ -32,5 +32,6 @@ export interface HudConfig {
 }
 export declare const DEFAULT_CONFIG: HudConfig;
 export declare function getConfigPath(): string;
+export declare function mergeConfig(userConfig: Partial<HudConfig>): HudConfig;
 export declare function loadConfig(): Promise<HudConfig>;
 //# sourceMappingURL=config.d.ts.map
