@@ -33,9 +33,10 @@ export function renderSessionLine(ctx: RenderContext): string {
   // Model and context bar (FIRST)
   // Plan name only shows if showUsage is enabled (respects hybrid toggle)
   const providerLabel = getProviderLabel(ctx.stdin);
-  const planName = display?.showUsage !== false ? ctx.usageData?.planName : undefined;
+  const showUsage = display?.showUsage !== false;
+  const planName = showUsage ? ctx.usageData?.planName : undefined;
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
-  const billingLabel = hasApiKey ? red('API') : planName;
+  const billingLabel = showUsage ? (planName ?? (hasApiKey ? red('API') : undefined)) : undefined;
   const planDisplay = providerLabel ?? billingLabel;
   const modelDisplay = planDisplay ? `${model} | ${planDisplay}` : model;
 
