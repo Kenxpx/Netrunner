@@ -20,6 +20,7 @@ export interface HudConfig {
   };
   display: {
     showModel: boolean;
+    showProject: boolean;
     showContextBar: boolean;
     contextValue: ContextValueMode;
     showConfigCounts: boolean;
@@ -50,6 +51,7 @@ export const DEFAULT_CONFIG: HudConfig = {
   },
   display: {
     showModel: true,
+    showProject: true,
     showContextBar: true,
     contextValue: 'percent',
     showConfigCounts: false,
@@ -158,6 +160,9 @@ export function mergeConfig(userConfig: Partial<HudConfig>): HudConfig {
     showModel: typeof migrated.display?.showModel === 'boolean'
       ? migrated.display.showModel
       : DEFAULT_CONFIG.display.showModel,
+    showProject: typeof migrated.display?.showProject === 'boolean'
+      ? migrated.display.showProject
+      : DEFAULT_CONFIG.display.showProject,
     showContextBar: typeof migrated.display?.showContextBar === 'boolean'
       ? migrated.display.showContextBar
       : DEFAULT_CONFIG.display.showContextBar,

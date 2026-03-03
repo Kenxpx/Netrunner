@@ -192,6 +192,26 @@ test('renderProjectLine includes session name when present', () => {
   assert.ok(line?.includes('Renamed Session'));
 });
 
+test('renderSessionLine omits project name when showProject is false', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/Users/jarrod/my-project';
+  ctx.gitStatus = { branch: 'main', isDirty: true, ahead: 0, behind: 0 };
+  ctx.config.display.showProject = false;
+  const line = renderSessionLine(ctx);
+  assert.ok(!line.includes('my-project'), 'should not include project name when showProject is false');
+  assert.ok(line.includes('git:('), 'should still include git status when showProject is false');
+});
+
+test('renderProjectLine keeps git status when showProject is false', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/Users/jarrod/my-project';
+  ctx.gitStatus = { branch: 'main', isDirty: true, ahead: 0, behind: 0 };
+  ctx.config.display.showProject = false;
+  const line = renderProjectLine(ctx);
+  assert.ok(line?.includes('git:('), 'should still include git status');
+  assert.ok(!line?.includes('my-project'), 'should hide project path');
+});
+
 test('renderSessionLine displays git branch when present', () => {
   const ctx = baseContext();
   ctx.stdin.cwd = '/tmp/my-project';
