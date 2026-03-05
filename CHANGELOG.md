@@ -2,6 +2,22 @@
 
 All notable changes to Claude HUD will be documented in this file.
 
+## [0.0.9] - 2026-03-05
+
+### Changed
+- Add Usage API timeout override via `CLAUDE_HUD_USAGE_TIMEOUT_MS` (default now 15s).
+
+### Fixed
+- Setup instructions now generate shell-safe Windows commands for `win32 + bash` environments (#121, #148).
+- Bedrock startup model labels now normalize known model IDs when `model.display_name` is missing (#137).
+- Usage API reliability improvements for proxy and OAuth token-refresh edge cases:
+  - Respect `HTTPS_PROXY`/`ALL_PROXY`/`HTTP_PROXY` with `NO_PROXY` bypass.
+  - Preserve usage and plan display when keychain tokens refresh without `subscriptionType` metadata.
+  - Reduce false `timeout`/`403` usage warnings in proxied and high-latency environments (#146, #161, #162).
+- Render output now preserves regular spaces instead of non-breaking spaces to avoid vertical statusline rendering issues on startup (#142).
+
+---
+
 ## [0.0.8] - 2026-03-03
 
 ### Added
