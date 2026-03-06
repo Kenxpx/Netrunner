@@ -49,13 +49,26 @@ function validateContextValue(value) {
 function migrateConfig(userConfig) {
     const migrated = { ...userConfig };
     if ('layout' in userConfig && !('lineLayout' in userConfig)) {
-        if (userConfig.layout === 'separators') {
-            migrated.lineLayout = 'compact';
-            migrated.showSeparators = true;
+        if (typeof userConfig.layout === 'string') {
+            // Legacy string migration (v0.0.x → v0.1.x)
+            if (userConfig.layout === 'separators') {
+                migrated.lineLayout = 'compact';
+                migrated.showSeparators = true;
+            }
+            else {
+                migrated.lineLayout = 'compact';
+                migrated.showSeparators = false;
+            }
         }
-        else {
-            migrated.lineLayout = 'compact';
-            migrated.showSeparators = false;
+        else if (typeof userConfig.layout === 'object' && userConfig.layout !== null) {
+            // Object layout written by third-party tools — extract nested fields
+            const obj = userConfig.layout;
+            if (typeof obj.lineLayout === 'string')
+                migrated.lineLayout = obj.lineLayout;
+            if (typeof obj.showSeparators === 'boolean')
+                migrated.showSeparators = obj.showSeparators;
+            if (typeof obj.pathLevels === 'number')
+                migrated.pathLevels = obj.pathLevels;
         }
         delete migrated.layout;
     }
@@ -66,7 +79,7 @@ function validateThreshold(value, max = 100) {
         return 0;
     return Math.max(0, Math.min(max, value));
 }
-function mergeConfig(userConfig) {
+export function mergeConfig(userConfig) {
     const migrated = migrateConfig(userConfig);
     const lineLayout = validateLineLayout(migrated.lineLayout)
         ? migrated.lineLayout
