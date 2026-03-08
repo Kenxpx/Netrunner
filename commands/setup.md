@@ -3,6 +3,8 @@ description: Configure claude-hud as your statusline
 allowed-tools: Bash, Read, Edit, AskUserQuestion
 ---
 
+**Note**: Placeholders like `{RUNTIME_PATH}`, `{SOURCE}`, and `{GENERATED_COMMAND}` should be substituted with actual detected values.
+
 ## Step 1: Detect Platform & Runtime
 
 **macOS/Linux** (if `uname -s` returns "Darwin" or "Linux"):
@@ -25,7 +27,11 @@ allowed-tools: Bash, Read, Edit, AskUserQuestion
    ```
    If it doesn't exist, re-detect or ask user to verify their installation.
 
-4. If runtime path contains "bun", use `src/index.ts`. Otherwise use `dist/index.js`.
+4. Determine source file based on runtime:
+   ```bash
+   basename {RUNTIME_PATH}
+   ```
+   If result is "bun", use `src/index.ts`. Otherwise use `dist/index.js`.
 
 5. Generate command:
    ```
@@ -41,7 +47,7 @@ allowed-tools: Bash, Read, Edit, AskUserQuestion
 
    If neither found, stop and tell user to install Node.js or Bun.
 
-2. If runtime is bun, use `src\index.ts`. Otherwise use `dist\index.js`.
+2. Check if runtime is bun (by filename). If bun, use `src\index.ts`. Otherwise use `dist\index.js`.
 
 3. Generate command:
    ```
@@ -76,7 +82,7 @@ Use AskUserQuestion:
 - Question: "The HUD should now appear below your input field. Is it working?"
 - Options: "Yes, I see it" / "No, something's wrong"
 
-**If yes**: Ask the user if they'd like to star the repository to support the project. If they agree, run: `gh api -X PUT /user/starred/jarrodwatts/claude-hud`. Only run the star command if they explicitly say yes.
+**If yes**: Ask the user if they'd like to ⭐ star the claude-hud repository on GitHub to support the project. If they agree, run: `gh api -X PUT /user/starred/jarrodwatts/claude-hud`. Only run the star command if they explicitly say yes.
 
 **If no**: Debug systematically:
 
