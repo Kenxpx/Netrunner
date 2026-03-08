@@ -83,6 +83,30 @@ function countRulesInDir(rulesDir) {
     }
     return count;
 }
+function normalizePathForComparison(inputPath) {
+    let normalized = path.normalize(path.resolve(inputPath));
+    const root = path.parse(normalized).root;
+    while (normalized.length > root.length && normalized.endsWith(path.sep)) {
+        normalized = normalized.slice(0, -1);
+    }
+    return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+function pathsReferToSameLocation(pathA, pathB) {
+    if (normalizePathForComparison(pathA) === normalizePathForComparison(pathB)) {
+        return true;
+    }
+    if (!fs.existsSync(pathA) || !fs.existsSync(pathB)) {
+        return false;
+    }
+    try {
+        const realPathA = fs.realpathSync.native(pathA);
+        const realPathB = fs.realpathSync.native(pathB);
+        return normalizePathForComparison(realPathA) === normalizePathForComparison(realPathB);
+    }
+    catch {
+        return false;
+    }
+}
 export async function countConfigs(cwd) {
     let claudeMdCount = 0;
     let rulesCount = 0;
@@ -116,6 +140,9 @@ export async function countConfigs(cwd) {
         userMcpServers.delete(name);
     }
     // === PROJECT SCOPE ===
+    // When cwd is the home directory (or an equivalent path to it), {cwd}/.claude/CLAUDE.md
+    // overlaps with user scope ~/.claude/CLAUDE.md, so skip it to avoid double-counting.
+    const isHome = cwd ? pathsReferToSameLocation(cwd, homeDir) : false;
     if (cwd) {
         // {cwd}/CLAUDE.md
         if (fs.existsSync(path.join(cwd, 'CLAUDE.md'))) {
@@ -125,8 +152,8 @@ export async function countConfigs(cwd) {
         if (fs.existsSync(path.join(cwd, 'CLAUDE.local.md'))) {
             claudeMdCount++;
         }
-        // {cwd}/.claude/CLAUDE.md (alternative location)
-        if (fs.existsSync(path.join(cwd, '.claude', 'CLAUDE.md'))) {
+        // {cwd}/.claude/CLAUDE.md (alternative location, skip if cwd is home)
+        if (!isHome && fs.existsSync(path.join(cwd, '.claude', 'CLAUDE.md'))) {
             claudeMdCount++;
         }
         // {cwd}/.claude/CLAUDE.local.md
@@ -134,15 +161,21 @@ export async function countConfigs(cwd) {
             claudeMdCount++;
         }
         // {cwd}/.claude/rules/*.md (recursive)
-        rulesCount += countRulesInDir(path.join(cwd, '.claude', 'rules'));
+        // Skip when cwd is home because it overlaps with user-scope ~/.claude/rules.
+        if (!isHome) {
+            rulesCount += countRulesInDir(path.join(cwd, '.claude', 'rules'));
+        }
         // {cwd}/.mcp.json (project MCP config) - tracked separately for disabled filtering
         const mcpJsonServers = getMcpServerNames(path.join(cwd, '.mcp.json'));
         // {cwd}/.claude/settings.json (project settings)
+        // Skip when cwd is home because it overlaps with user-scope ~/.claude/settings.json.
         const projectSettings = path.join(cwd, '.claude', 'settings.json');
-        for (const name of getMcpServerNames(projectSettings)) {
-            projectMcpServers.add(name);
+        if (!isHome) {
+            for (const name of getMcpServerNames(projectSettings)) {
+                projectMcpServers.add(name);
+            }
+            hooksCount += countHooksInFile(projectSettings);
         }
-        hooksCount += countHooksInFile(projectSettings);
         // {cwd}/.claude/settings.local.json (local project settings)
         const localSettings = path.join(cwd, '.claude', 'settings.local.json');
         for (const name of getMcpServerNames(localSettings)) {
