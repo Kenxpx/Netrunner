@@ -13,6 +13,7 @@ allowed-tools: Bash, Read, Edit, AskUserQuestion
    ```bash
    ls -td ~/.claude/plugins/cache/claude-hud/claude-hud/*/ 2>/dev/null | head -1
    ```
+   If empty, the plugin is not installed. Tell user to install via marketplace first.
 
 2. Get runtime absolute path (prefer bun for performance, fallback to node):
    ```bash
@@ -40,18 +41,24 @@ allowed-tools: Bash, Read, Edit, AskUserQuestion
 
 **Windows** (if `uname` fails or unavailable):
 
-1. Get runtime absolute path (prefer bun, fallback to node):
+1. Get plugin path:
    ```powershell
-   if (Get-Command bun -ErrorAction SilentlyContinue) { (Get-Command bun).Source } else { (Get-Command node).Source }
+   (Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\claude-hud\claude-hud" | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+   ```
+   If empty or errors, the plugin is not installed. Tell user to install via marketplace first.
+
+2. Get runtime absolute path (prefer bun, fallback to node):
+   ```powershell
+   if (Get-Command bun -ErrorAction SilentlyContinue) { (Get-Command bun).Source } elseif (Get-Command node -ErrorAction SilentlyContinue) { (Get-Command node).Source } else { Write-Error "Neither bun nor node found" }
    ```
 
    If neither found, stop and tell user to install Node.js or Bun.
 
-2. Check if runtime is bun (by filename). If bun, use `src\index.ts`. Otherwise use `dist\index.js`.
+3. Check if runtime is bun (by filename). If bun, use `src\index.ts`. Otherwise use `dist\index.js`.
 
-3. Generate command:
+4. Generate command (note: quotes around runtime path handle spaces in paths):
    ```
-   powershell -Command "& {$p=(gci $env:USERPROFILE\.claude\plugins\cache\claude-hud\claude-hud | sort LastWriteTime -Desc | select -First 1).FullName; {RUNTIME_PATH} (Join-Path $p '{SOURCE}')}"
+   powershell -Command "& {$p=(Get-ChildItem $env:USERPROFILE\.claude\plugins\cache\claude-hud\claude-hud | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName; & '{RUNTIME_PATH}' (Join-Path $p '{SOURCE}')}"
    ```
 
 **WSL (Windows Subsystem for Linux)**: If running in WSL, use the macOS/Linux instructions. Ensure the plugin is installed in the Linux environment (`~/.claude/plugins/...`), not the Windows side.
@@ -62,6 +69,7 @@ Run the generated command. It should produce output (the HUD lines) within 1 sec
 
 - If it errors, do not proceed to Step 3.
 - If it hangs for more than a few seconds, cancel and debug.
+- This test catches issues like broken runtime binaries, missing plugins, or path problems.
 
 ## Step 3: Apply Configuration
 
