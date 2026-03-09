@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { render } from '../dist/render/index.js';
 import { renderSessionLine } from '../dist/render/session-line.js';
+import { renderProjectLine } from '../dist/render/lines/project.js';
 import { renderToolsLine } from '../dist/render/tools-line.js';
 import { renderAgentsLine } from '../dist/render/agents-line.js';
 import { renderTodosLine } from '../dist/render/todos-line.js';
@@ -139,6 +140,22 @@ test('renderSessionLine omits project name when cwd is undefined', () => {
   ctx.stdin.cwd = undefined;
   const line = renderSessionLine(ctx);
   assert.ok(line.includes('[Opus]'));
+});
+
+test('renderSessionLine includes session name when present', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/my-project';
+  ctx.transcript.sessionName = 'Renamed Session';
+  const line = renderSessionLine(ctx);
+  assert.ok(line.includes('Renamed Session'));
+});
+
+test('renderProjectLine includes session name when present', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/my-project';
+  ctx.transcript.sessionName = 'Renamed Session';
+  const line = renderProjectLine(ctx);
+  assert.ok(line?.includes('Renamed Session'));
 });
 
 test('renderSessionLine displays git branch when present', () => {
