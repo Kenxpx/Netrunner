@@ -1,5 +1,5 @@
 import { getModelName, getProviderLabel } from '../../stdin.js';
-import { cyan, magenta, yellow, red } from '../colors.js';
+import { cyan, dim, magenta, yellow, red } from '../colors.js';
 export function renderProjectLine(ctx) {
     const display = ctx.config?.display;
     const parts = [];
@@ -51,6 +51,9 @@ export function renderProjectLine(ctx) {
             gitPart = ` ${magenta('git:(')}${cyan(gitParts.join(''))}${magenta(')')}`;
         }
         parts.push(`${yellow(projectPath)}${gitPart}`);
+    }
+    if (ctx.transcript.sessionName) {
+        parts.push(dim(ctx.transcript.sessionName));
     }
     if (parts.length === 0) {
         return null;
