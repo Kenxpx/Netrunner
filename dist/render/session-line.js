@@ -89,6 +89,10 @@ export function renderSessionLine(ctx) {
         }
         parts.push(`${yellow(projectPath)}${gitPart}`);
     }
+    // Session name (custom title from /rename, or auto-generated slug)
+    if (ctx.transcript.sessionName) {
+        parts.push(dim(ctx.transcript.sessionName));
+    }
     // Config counts (respects environmentThreshold)
     if (display?.showConfigCounts !== false) {
         const totalCounts = ctx.claudeMdCount + ctx.rulesCount + ctx.mcpCount + ctx.hooksCount;
