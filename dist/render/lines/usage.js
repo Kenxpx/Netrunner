@@ -48,7 +48,9 @@ export function renderUsageLine(ctx) {
             ? (sevenDayReset
                 ? `${quotaBar(sevenDay)} ${sevenDayDisplay} (${sevenDayReset} / 7d)`
                 : `${quotaBar(sevenDay)} ${sevenDayDisplay}`)
-            : `7d: ${sevenDayDisplay}`;
+            : (sevenDayReset
+                ? `7d: ${sevenDayDisplay} (${sevenDayReset})`
+                : `7d: ${sevenDayDisplay}`);
         return `${label} ${fiveHourPart} | ${sevenDayPart}`;
     }
     return `${label} ${fiveHourPart}`;

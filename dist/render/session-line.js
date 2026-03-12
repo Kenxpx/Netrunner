@@ -158,7 +158,9 @@ export function renderSessionLine(ctx) {
                         ? (sevenDayReset
                             ? `${quotaBar(sevenDay)} ${sevenDayDisplay} (${sevenDayReset} / 7d)`
                             : `${quotaBar(sevenDay)} ${sevenDayDisplay}`)
-                        : `7d: ${sevenDayDisplay}`;
+                        : (sevenDayReset
+                            ? `7d: ${sevenDayDisplay} (${sevenDayReset})`
+                            : `7d: ${sevenDayDisplay}`);
                     parts.push(`${fiveHourPart} | ${sevenDayPart}`);
                 }
                 else {
@@ -243,6 +245,13 @@ function formatResetTime(resetAt) {
         return `${diffMins}m`;
     const hours = Math.floor(diffMins / 60);
     const mins = diffMins % 60;
+    if (hours >= 24) {
+        const days = Math.floor(hours / 24);
+        const remHours = hours % 24;
+        if (remHours > 0)
+            return `${days}d ${remHours}h`;
+        return `${days}d`;
+    }
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 //# sourceMappingURL=session-line.js.map
