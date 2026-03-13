@@ -7,7 +7,7 @@ allowed-tools: Bash, Read, Edit, AskUserQuestion
 
 ## Step 1: Detect Platform & Runtime
 
-**macOS/Linux** (if `uname -s` returns "Darwin" or "Linux"):
+**macOS/Linux** (if `uname -s` returns "Darwin", "Linux", or a MINGW*/MSYS*/CYGWIN* variant):
 
 1. Get plugin path:
    ```bash
@@ -32,14 +32,14 @@ allowed-tools: Bash, Read, Edit, AskUserQuestion
    ```bash
    basename {RUNTIME_PATH}
    ```
-   If result is "bun", use `src/index.ts`. Otherwise use `dist/index.js`.
+   If result is "bun", use `src/index.ts` (bun has native TypeScript support). Otherwise use `dist/index.js` (pre-compiled).
 
-5. Generate command:
+5. Generate command (quotes around runtime path handle spaces):
    ```
-   bash -c '{RUNTIME_PATH} "$(ls -td ~/.claude/plugins/cache/claude-hud/claude-hud/*/ 2>/dev/null | head -1){SOURCE}"'
+   bash -c '"{RUNTIME_PATH}" "$(ls -td ~/.claude/plugins/cache/claude-hud/claude-hud/*/ 2>/dev/null | head -1){SOURCE}"'
    ```
 
-**Windows** (if `uname` fails or unavailable):
+**Windows** (native PowerShell/cmd.exe - if `uname` command is not available):
 
 1. Get plugin path:
    ```powershell
@@ -73,7 +73,11 @@ Run the generated command. It should produce output (the HUD lines) within 1 sec
 
 ## Step 3: Apply Configuration
 
-Read `~/.claude/settings.json`, merge in the statusLine config, write back. Preserve all existing settings.
+Read the settings file and merge in the statusLine config, preserving all existing settings:
+- **macOS/Linux/Git Bash**: `~/.claude/settings.json`
+- **Windows (native PowerShell)**: `$env:USERPROFILE\.claude\settings.json`
+
+If the file doesn't exist, create it. If it contains invalid JSON, report the error and do not overwrite.
 
 ```json
 {
@@ -83,6 +87,8 @@ Read `~/.claude/settings.json`, merge in the statusLine config, write back. Pres
   }
 }
 ```
+
+**Note**: The generated command dynamically finds and runs the latest installed plugin version. Updates are automatic - no need to re-run setup after plugin updates.
 
 ## Step 4: Verify With User
 
@@ -95,8 +101,9 @@ Use AskUserQuestion:
 **If no**: Debug systematically:
 
 1. **Verify config was applied**:
-   - Read `~/.claude/settings.json`
+   - Read settings file (`~/.claude/settings.json` or `$env:USERPROFILE\.claude\settings.json` on Windows)
    - Check statusLine.command exists and looks correct
+   - If command contains a hardcoded version path (not using dynamic `ls -td` lookup), it may be a stale config from a previous setup
 
 2. **Test the command manually** and capture error output:
    ```bash
@@ -108,7 +115,8 @@ Use AskUserQuestion:
    **"command not found" or empty output**:
    - Runtime path might be wrong: `ls -la {RUNTIME_PATH}`
    - On macOS with mise/nvm/asdf: the absolute path may have changed after a runtime update
-   - Solution: re-detect with `command -v bun` or `command -v node`
+   - Symlinks may be stale: `command -v node` often returns a symlink that can break after version updates
+   - Solution: re-detect with `command -v bun` or `command -v node`, and verify with `realpath {RUNTIME_PATH}` to get the true absolute path
 
    **"No such file or directory" for plugin**:
    - Plugin might not be installed: `ls ~/.claude/plugins/cache/claude-hud/`
