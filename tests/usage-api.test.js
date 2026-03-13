@@ -203,6 +203,190 @@ describe('resolveKeychainCredentials', () => {
     assert.equal(result.credentials?.accessToken, 'canonical-token');
     assert.equal(result.shouldBackoff, false);
   });
+
+  test('prefers account-scoped keychain entries before generic fallback', () => {
+    const now = 1000;
+    const serviceNames = ['Claude Code-credentials'];
+    const calls = [];
+
+    const result = resolveKeychainCredentials(
+      serviceNames,
+      now,
+      (serviceName, accountName) => {
+        calls.push({ serviceName, accountName: accountName ?? null });
+        if (accountName === 'jarrod') {
+          return JSON.stringify(buildCredentials({
+            accessToken: 'account-token',
+            subscriptionType: 'claude_max_2024',
+            expiresAt: now + 60_000,
+          }));
+        }
+
+        return JSON.stringify({
+          claudeAiOauth: {
+            accessToken: 'generic-token',
+            subscriptionType: 'claude_pro_2024',
+            expiresAt: now + 60_000,
+          },
+        });
+      },
+      'jarrod',
+    );
+
+    assert.equal(result.credentials?.accessToken, 'account-token');
+    assert.equal(result.shouldBackoff, false);
+    assert.deepEqual(calls, [{ serviceName: 'Claude Code-credentials', accountName: 'jarrod' }]);
+  });
+
+  test('falls back to generic lookup when account-scoped entry is missing', () => {
+    const now = 1000;
+    const serviceNames = ['Claude Code-credentials'];
+    const calls = [];
+
+    const result = resolveKeychainCredentials(
+      serviceNames,
+      now,
+      (serviceName, accountName) => {
+        calls.push({ serviceName, accountName: accountName ?? null });
+        if (accountName === 'jarrod') {
+          throw buildMissingKeychainError();
+        }
+
+        return JSON.stringify(buildCredentials({
+          accessToken: 'generic-token',
+          subscriptionType: 'claude_pro_2024',
+          expiresAt: now + 60_000,
+        }));
+      },
+      'jarrod',
+    );
+
+    assert.equal(result.credentials?.accessToken, 'generic-token');
+    assert.equal(result.shouldBackoff, false);
+    assert.deepEqual(calls, [
+      { serviceName: 'Claude Code-credentials', accountName: 'jarrod' },
+      { serviceName: 'Claude Code-credentials', accountName: null },
+    ]);
+  });
+
+  test('does not fall back to a generic entry when account-scoped data exists but is unusable', () => {
+    const now = 1000;
+    const serviceNames = ['Claude Code-credentials'];
+    const calls = [];
+
+    const result = resolveKeychainCredentials(
+      serviceNames,
+      now,
+      (serviceName, accountName) => {
+        calls.push({ serviceName, accountName: accountName ?? null });
+        if (accountName === 'jarrod') {
+          return JSON.stringify({ mcpOAuth: { accessToken: 'wrong-scope' } });
+        }
+
+        return JSON.stringify(buildCredentials({
+          accessToken: 'generic-token',
+          subscriptionType: 'claude_pro_2024',
+          expiresAt: now + 60_000,
+        }));
+      },
+      'jarrod',
+    );
+
+    assert.equal(result.credentials, null);
+    assert.equal(result.shouldBackoff, false);
+    assert.deepEqual(calls, [{ serviceName: 'Claude Code-credentials', accountName: 'jarrod' }]);
+  });
+
+  test('does not fall back to a generic entry when account-scoped lookup returns an empty secret', () => {
+    const now = 1000;
+    const serviceNames = ['Claude Code-credentials'];
+    const calls = [];
+
+    const result = resolveKeychainCredentials(
+      serviceNames,
+      now,
+      (serviceName, accountName) => {
+        calls.push({ serviceName, accountName: accountName ?? null });
+        if (accountName === 'jarrod') {
+          return '';
+        }
+
+        return JSON.stringify(buildCredentials({
+          accessToken: 'generic-token',
+          subscriptionType: 'claude_pro_2024',
+          expiresAt: now + 60_000,
+        }));
+      },
+      'jarrod',
+    );
+
+    assert.equal(result.credentials, null);
+    assert.equal(result.shouldBackoff, false);
+    assert.deepEqual(calls, [{ serviceName: 'Claude Code-credentials', accountName: 'jarrod' }]);
+  });
+
+  test('does not fall back to a generic entry when account-scoped lookup fails with a non-missing error', () => {
+    const now = 1000;
+    const serviceNames = ['Claude Code-credentials'];
+    const calls = [];
+
+    const result = resolveKeychainCredentials(
+      serviceNames,
+      now,
+      (serviceName, accountName) => {
+        calls.push({ serviceName, accountName: accountName ?? null });
+        if (accountName === 'jarrod') {
+          throw new Error('security command timed out');
+        }
+
+        return JSON.stringify(buildCredentials({
+          accessToken: 'generic-token',
+          subscriptionType: 'claude_pro_2024',
+          expiresAt: now + 60_000,
+        }));
+      },
+      'jarrod',
+    );
+
+    assert.equal(result.credentials, null);
+    assert.equal(result.shouldBackoff, true);
+    assert.deepEqual(calls, [{ serviceName: 'Claude Code-credentials', accountName: 'jarrod' }]);
+  });
+
+  test('does not fall back to generic credentials from another service when a later account-scoped entry is unusable', () => {
+    const now = 1000;
+    const serviceNames = ['Claude Code-credentials-hashed', 'Claude Code-credentials'];
+    const calls = [];
+
+    const result = resolveKeychainCredentials(
+      serviceNames,
+      now,
+      (serviceName, accountName) => {
+        calls.push({ serviceName, accountName: accountName ?? null });
+        if (accountName === 'jarrod' && serviceName === 'Claude Code-credentials-hashed') {
+          throw buildMissingKeychainError();
+        }
+
+        if (accountName === 'jarrod' && serviceName === 'Claude Code-credentials') {
+          return JSON.stringify({ mcpOAuth: { accessToken: 'wrong-scope' } });
+        }
+
+        return JSON.stringify(buildCredentials({
+          accessToken: `generic-${serviceName}`,
+          subscriptionType: 'claude_pro_2024',
+          expiresAt: now + 60_000,
+        }));
+      },
+      'jarrod',
+    );
+
+    assert.equal(result.credentials, null);
+    assert.equal(result.shouldBackoff, false);
+    assert.deepEqual(calls, [
+      { serviceName: 'Claude Code-credentials-hashed', accountName: 'jarrod' },
+      { serviceName: 'Claude Code-credentials', accountName: 'jarrod' },
+    ]);
+  });
 });
 
 describe('getUsage', () => {
