@@ -47,7 +47,7 @@ export declare function getUsage(overrides?: Partial<UsageApiDeps>): Promise<Usa
  */
 export declare function getKeychainServiceName(configDir: string, homeDir: string): string;
 export declare function getKeychainServiceNames(configDir: string, homeDir: string, env?: NodeJS.ProcessEnv): string[];
-export declare function resolveKeychainCredentials(serviceNames: string[], now: number, loadService: (serviceName: string) => string): {
+export declare function resolveKeychainCredentials(serviceNames: string[], now: number, loadService: (serviceName: string, accountName?: string) => string, accountName?: string | null): {
     credentials: {
         accessToken: string;
         subscriptionType: string;
