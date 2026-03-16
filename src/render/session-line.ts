@@ -2,7 +2,7 @@ import type { RenderContext } from '../types.js';
 import { isLimitReached } from '../types.js';
 import { getContextPercent, getBufferedPercent, getModelName, getProviderLabel, getTotalTokens } from '../stdin.js';
 import { getOutputSpeed } from '../speed-tracker.js';
-import { coloredBar, cyan, dim, magenta, red, yellow, getContextColor, quotaBar, RESET } from './colors.js';
+import { coloredBar, critical, cyan, dim, magenta, red, warning, yellow, getContextColor, getQuotaColor, quotaBar, RESET } from './colors.js';
 
 const DEBUG = process.env.DEBUG?.includes('claude-hud') || process.env.DEBUG === '*';
 
@@ -22,13 +22,14 @@ export function renderSessionLine(ctx: RenderContext): string {
     console.error(`[claude-hud:context] autocompactBuffer=disabled, showing raw ${rawPercent}% (buffered would be ${bufferedPercent}%)`);
   }
 
-  const bar = coloredBar(percent);
+  const colors = ctx.config?.colors;
+  const bar = coloredBar(percent, 10, colors);
 
   const parts: string[] = [];
   const display = ctx.config?.display;
   const contextValueMode = display?.contextValue ?? 'percent';
   const contextValue = formatContextValue(ctx, percent, contextValueMode);
-  const contextValueDisplay = `${getContextColor(percent)}${contextValue}${RESET}`;
+  const contextValueDisplay = `${getContextColor(percent, colors)}${contextValue}${RESET}`;
 
   // Model and context bar (FIRST)
   // Plan name only shows if showUsage is enabled (respects hybrid toggle)
@@ -141,12 +142,12 @@ export function renderSessionLine(ctx: RenderContext): string {
   if (display?.showUsage !== false && ctx.usageData?.planName && !providerLabel) {
     if (ctx.usageData.apiUnavailable) {
       const errorHint = formatUsageError(ctx.usageData.apiError);
-      parts.push(yellow(`usage: ⚠${errorHint}`));
+      parts.push(warning(`usage: ⚠${errorHint}`, colors));
     } else if (isLimitReached(ctx.usageData)) {
       const resetTime = ctx.usageData.fiveHour === 100
         ? formatResetTime(ctx.usageData.fiveHourResetAt)
         : formatResetTime(ctx.usageData.sevenDayResetAt);
-      parts.push(red(`⚠ Limit reached${resetTime ? ` (resets ${resetTime})` : ''}`));
+      parts.push(critical(`⚠ Limit reached${resetTime ? ` (resets ${resetTime})` : ''}`, colors));
     } else {
       const usageThreshold = display?.usageThreshold ?? 0;
       const fiveHour = ctx.usageData.fiveHour;
@@ -154,26 +155,26 @@ export function renderSessionLine(ctx: RenderContext): string {
       const effectiveUsage = Math.max(fiveHour ?? 0, sevenDay ?? 0);
 
       if (effectiveUsage >= usageThreshold) {
-        const fiveHourDisplay = formatUsagePercent(fiveHour);
+        const fiveHourDisplay = formatUsagePercent(fiveHour, colors);
         const fiveHourReset = formatResetTime(ctx.usageData.fiveHourResetAt);
 
         const usageBarEnabled = display?.usageBarEnabled ?? true;
         const fiveHourPart = usageBarEnabled
           ? (fiveHourReset
-              ? `${quotaBar(fiveHour ?? 0)} ${fiveHourDisplay} (${fiveHourReset} / 5h)`
-              : `${quotaBar(fiveHour ?? 0)} ${fiveHourDisplay}`)
+              ? `${quotaBar(fiveHour ?? 0, 10, colors)} ${fiveHourDisplay} (${fiveHourReset} / 5h)`
+              : `${quotaBar(fiveHour ?? 0, 10, colors)} ${fiveHourDisplay}`)
           : (fiveHourReset
               ? `5h: ${fiveHourDisplay} (${fiveHourReset})`
               : `5h: ${fiveHourDisplay}`);
 
         const sevenDayThreshold = display?.sevenDayThreshold ?? 80;
         if (sevenDay !== null && sevenDay >= sevenDayThreshold) {
-          const sevenDayDisplay = formatUsagePercent(sevenDay);
+          const sevenDayDisplay = formatUsagePercent(sevenDay, colors);
           const sevenDayReset = formatResetTime(ctx.usageData.sevenDayResetAt);
           const sevenDayPart = usageBarEnabled
             ? (sevenDayReset
-                ? `${quotaBar(sevenDay)} ${sevenDayDisplay} (${sevenDayReset} / 7d)`
-                : `${quotaBar(sevenDay)} ${sevenDayDisplay}`)
+                ? `${quotaBar(sevenDay, 10, colors)} ${sevenDayDisplay} (${sevenDayReset} / 7d)`
+                : `${quotaBar(sevenDay, 10, colors)} ${sevenDayDisplay}`)
             : (sevenDayReset
                 ? `7d: ${sevenDayDisplay} (${sevenDayReset})`
                 : `7d: ${sevenDayDisplay}`);
@@ -243,11 +244,11 @@ function formatContextValue(ctx: RenderContext, percent: number, mode: 'percent'
   return `${percent}%`;
 }
 
-function formatUsagePercent(percent: number | null): string {
+function formatUsagePercent(percent: number | null, colors?: RenderContext['config']['colors']): string {
   if (percent === null) {
     return dim('--');
   }
-  const color = getContextColor(percent);
+  const color = getQuotaColor(percent, colors);
   return `${color}${percent}%${RESET}`;
 }
 

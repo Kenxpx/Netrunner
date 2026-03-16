@@ -7,7 +7,7 @@ import { renderToolsLine } from '../dist/render/tools-line.js';
 import { renderAgentsLine } from '../dist/render/agents-line.js';
 import { renderTodosLine } from '../dist/render/todos-line.js';
 import { renderUsageLine } from '../dist/render/lines/usage.js';
-import { getContextColor } from '../dist/render/colors.js';
+import { getContextColor, getQuotaColor } from '../dist/render/colors.js';
 
 function stripAnsi(str) {
   // eslint-disable-next-line no-control-regex
@@ -42,6 +42,13 @@ function baseContext() {
       elementOrder: ['project', 'context', 'usage', 'environment', 'tools', 'agents', 'todos'],
       gitStatus: { enabled: true, showDirty: true, showAheadBehind: false, showFileStats: false },
       display: { showModel: true, showProject: true, showContextBar: true, contextValue: 'percent', showConfigCounts: true, showDuration: true, showSpeed: false, showTokenBreakdown: true, showUsage: true, usageBarEnabled: false, showTools: true, showAgents: true, showTodos: true, showSessionName: false, autocompactBuffer: 'enabled', usageThreshold: 0, sevenDayThreshold: 80, environmentThreshold: 0 },
+      colors: {
+        context: 'green',
+        usage: 'brightBlue',
+        warning: 'yellow',
+        usageWarning: 'brightMagenta',
+        critical: 'red',
+      },
     },
   };
 }
@@ -106,6 +113,21 @@ test('renderSessionLine handles missing cache token fields', () => {
 
 test('getContextColor returns yellow for warning threshold', () => {
   assert.equal(getContextColor(70), '\x1b[33m');
+});
+
+test('getContextColor and getQuotaColor respect custom semantic overrides', () => {
+  const colors = {
+    context: 'cyan',
+    usage: 'magenta',
+    warning: 'brightBlue',
+    usageWarning: 'yellow',
+    critical: 'red',
+  };
+
+  assert.equal(getContextColor(10, colors), '\x1b[36m');
+  assert.equal(getContextColor(70, colors), '\x1b[94m');
+  assert.equal(getQuotaColor(25, colors), '\x1b[35m');
+  assert.equal(getQuotaColor(80, colors), '\x1b[33m');
 });
 
 test('renderSessionLine includes config counts when present', () => {
@@ -769,6 +791,66 @@ test('renderSessionLine shows syncing hint when usage API is rate-limited', () =
   assert.ok(line.includes('usage:'), 'should show usage label');
   assert.ok(line.includes('syncing...'), 'should show syncing hint for rate limiting');
   assert.ok(!line.includes('rate-limited'), 'should not expose raw rate-limit error key');
+});
+
+test('renderSessionLine uses custom warning and critical colors for usage states', () => {
+  const ctx = baseContext();
+  ctx.config.colors = {
+    context: 'green',
+    usage: 'brightBlue',
+    warning: 'cyan',
+    usageWarning: 'brightMagenta',
+    critical: 'magenta',
+  };
+  ctx.usageData = {
+    planName: 'Max',
+    fiveHour: null,
+    sevenDay: null,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+    apiUnavailable: true,
+    apiError: 'http-401',
+  };
+
+  const warningLine = renderSessionLine(ctx);
+  assert.ok(warningLine.includes('\x1b[36musage: ⚠ (401)\x1b[0m'), `expected custom warning color, got: ${JSON.stringify(warningLine)}`);
+
+  ctx.usageData = {
+    planName: 'Pro',
+    fiveHour: 100,
+    sevenDay: 45,
+    fiveHourResetAt: new Date(Date.now() + 3600000),
+    sevenDayResetAt: null,
+  };
+
+  const criticalLine = renderSessionLine(ctx);
+  assert.ok(criticalLine.includes('\x1b[35m⚠ Limit reached'), `expected custom critical color, got: ${JSON.stringify(criticalLine)}`);
+});
+
+test('renderUsageLine uses custom usage palette overrides', () => {
+  const ctx = baseContext();
+  ctx.config.display.usageBarEnabled = true;
+  ctx.config.colors = {
+    context: 'green',
+    usage: 'cyan',
+    warning: 'yellow',
+    usageWarning: 'magenta',
+    critical: 'red',
+  };
+  ctx.usageData = {
+    planName: 'Pro',
+    fiveHour: 25,
+    sevenDay: 80,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+  };
+
+  const line = renderUsageLine(ctx);
+  assert.ok(line, 'should render usage line');
+  assert.ok(line.includes('\x1b[36m███'), `expected custom usage bar color, got: ${JSON.stringify(line)}`);
+  assert.ok(line.includes('\x1b[36m25%\x1b[0m'), `expected custom usage percentage color, got: ${JSON.stringify(line)}`);
+  assert.ok(line.includes('\x1b[35m████████'), `expected custom usage warning color, got: ${JSON.stringify(line)}`);
+  assert.ok(line.includes('\x1b[35m80%\x1b[0m'), `expected custom usage warning percentage color, got: ${JSON.stringify(line)}`);
 });
 
 test('renderSessionLine hides usage when showUsage config is false (hybrid toggle)', () => {

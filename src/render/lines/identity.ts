@@ -9,6 +9,7 @@ export function renderIdentityLine(ctx: RenderContext): string {
   const bufferedPercent = getBufferedPercent(ctx.stdin);
   const autocompactMode = ctx.config?.display?.autocompactBuffer ?? 'enabled';
   const percent = autocompactMode === 'disabled' ? rawPercent : bufferedPercent;
+  const colors = ctx.config?.colors;
 
   if (DEBUG && autocompactMode === 'disabled') {
     console.error(`[claude-hud:context] autocompactBuffer=disabled, showing raw ${rawPercent}% (buffered would be ${bufferedPercent}%)`);
@@ -17,10 +18,10 @@ export function renderIdentityLine(ctx: RenderContext): string {
   const display = ctx.config?.display;
   const contextValueMode = display?.contextValue ?? 'percent';
   const contextValue = formatContextValue(ctx, percent, contextValueMode);
-  const contextValueDisplay = `${getContextColor(percent)}${contextValue}${RESET}`;
+  const contextValueDisplay = `${getContextColor(percent, colors)}${contextValue}${RESET}`;
 
   let line = display?.showContextBar !== false
-    ? `${dim('Context')} ${coloredBar(percent)} ${contextValueDisplay}`
+    ? `${dim('Context')} ${coloredBar(percent, 10, colors)} ${contextValueDisplay}`
     : `${dim('Context')} ${contextValueDisplay}`;
 
   if (display?.showTokenBreakdown !== false && percent >= 85) {

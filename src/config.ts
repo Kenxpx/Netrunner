@@ -8,6 +8,22 @@ export type LineLayoutType = 'compact' | 'expanded';
 export type AutocompactBufferMode = 'enabled' | 'disabled';
 export type ContextValueMode = 'percent' | 'tokens' | 'remaining';
 export type HudElement = 'project' | 'context' | 'usage' | 'environment' | 'tools' | 'agents' | 'todos';
+export type HudColorName =
+  | 'red'
+  | 'green'
+  | 'yellow'
+  | 'magenta'
+  | 'cyan'
+  | 'brightBlue'
+  | 'brightMagenta';
+
+export interface HudColorOverrides {
+  context: HudColorName;
+  usage: HudColorName;
+  warning: HudColorName;
+  usageWarning: HudColorName;
+  critical: HudColorName;
+}
 
 export const DEFAULT_ELEMENT_ORDER: HudElement[] = [
   'project',
@@ -56,6 +72,7 @@ export interface HudConfig {
     cacheTtlSeconds: number;
     failureCacheTtlSeconds: number;
   };
+  colors: HudColorOverrides;
 }
 
 export const DEFAULT_CONFIG: HudConfig = {
@@ -93,6 +110,13 @@ export const DEFAULT_CONFIG: HudConfig = {
     cacheTtlSeconds: 60,
     failureCacheTtlSeconds: 15,
   },
+  colors: {
+    context: 'green',
+    usage: 'brightBlue',
+    warning: 'yellow',
+    usageWarning: 'brightMagenta',
+    critical: 'red',
+  },
 };
 
 export function getConfigPath(): string {
@@ -114,6 +138,16 @@ function validateAutocompactBuffer(value: unknown): value is AutocompactBufferMo
 
 function validateContextValue(value: unknown): value is ContextValueMode {
   return value === 'percent' || value === 'tokens' || value === 'remaining';
+}
+
+function validateColorName(value: unknown): value is HudColorName {
+  return value === 'red'
+    || value === 'green'
+    || value === 'yellow'
+    || value === 'magenta'
+    || value === 'cyan'
+    || value === 'brightBlue'
+    || value === 'brightMagenta';
 }
 
 function validateElementOrder(value: unknown): HudElement[] {
@@ -275,7 +309,25 @@ export function mergeConfig(userConfig: Partial<HudConfig>): HudConfig {
     ),
   };
 
-  return { lineLayout, showSeparators, pathLevels, elementOrder, gitStatus, display, usage };
+  const colors = {
+    context: validateColorName(migrated.colors?.context)
+      ? migrated.colors.context
+      : DEFAULT_CONFIG.colors.context,
+    usage: validateColorName(migrated.colors?.usage)
+      ? migrated.colors.usage
+      : DEFAULT_CONFIG.colors.usage,
+    warning: validateColorName(migrated.colors?.warning)
+      ? migrated.colors.warning
+      : DEFAULT_CONFIG.colors.warning,
+    usageWarning: validateColorName(migrated.colors?.usageWarning)
+      ? migrated.colors.usageWarning
+      : DEFAULT_CONFIG.colors.usageWarning,
+    critical: validateColorName(migrated.colors?.critical)
+      ? migrated.colors.critical
+      : DEFAULT_CONFIG.colors.critical,
+  };
+
+  return { lineLayout, showSeparators, pathLevels, elementOrder, gitStatus, display, usage, colors };
 }
 
 export async function loadConfig(): Promise<HudConfig> {
