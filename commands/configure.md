@@ -1,5 +1,5 @@
 ---
-description: Configure HUD display options (layout, presets, display elements)
+description: Configure HUD display options (layout, presets, display elements) while preserving advanced manual overrides
 allowed-tools: Read, Write, AskUserQuestion
 ---
 
@@ -14,6 +14,9 @@ Store current values and note whether config exists (determines which flow to us
 These are always enabled and NOT configurable:
 - Model name `[Opus]`
 - Context bar `████░░░░░░ 45%`
+
+Advanced settings such as `colors.*`, `pathLevels`, `display.usageThreshold`, and
+`display.environmentThreshold` are preserved when saving but are not edited by this guided flow.
 
 ---
 
@@ -268,6 +271,7 @@ Merge with existing config, preserving:
 - `pathLevels` (not in configure flow)
 - `display.usageThreshold` (advanced config)
 - `display.environmentThreshold` (advanced config)
+- `colors` (advanced manual palette overrides)
 
 **Migration note**: Old configs with `layout: "default"` or `layout: "separators"` are automatically migrated to the new `lineLayout` + `showSeparators` format on load.
 

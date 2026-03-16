@@ -103,7 +103,8 @@ Customize your HUD anytime:
 /claude-hud:configure
 ```
 
-The guided flow walks you through customization — no manual editing needed:
+The guided flow handles layout and display toggles. Advanced overrides such as
+custom colors and thresholds are preserved there, but you set them by editing the config file directly:
 
 - **First time setup**: Choose a preset (Full/Essential/Minimal), then fine-tune individual elements
 - **Customize anytime**: Toggle items on/off, adjust git display style, switch layouts
@@ -121,7 +122,8 @@ After choosing a preset, you can turn individual elements on or off.
 
 ### Manual Configuration
 
-You can also edit the config file directly at `~/.claude/plugins/claude-hud/config.json`.
+Edit `~/.claude/plugins/claude-hud/config.json` directly for advanced settings such as `colors.*`,
+`pathLevels`, and threshold overrides. Running `/claude-hud:configure` preserves those manual settings.
 
 ### Options
 
@@ -150,6 +152,13 @@ You can also edit the config file directly at `~/.claude/plugins/claude-hud/conf
 | `display.showSessionName` | boolean | false | Show session slug or custom title from `/rename` |
 | `usage.cacheTtlSeconds` | number | 60 | How long (seconds) to cache a successful usage API response |
 | `usage.failureCacheTtlSeconds` | number | 15 | How long (seconds) to cache a failed usage API response before retrying |
+| `colors.context` | color name | `green` | Base color for the context bar and context percentage |
+| `colors.usage` | color name | `brightBlue` | Base color for usage bars and percentages below warning thresholds |
+| `colors.warning` | color name | `yellow` | Warning color for context thresholds and usage warning text |
+| `colors.usageWarning` | color name | `brightMagenta` | Warning color for usage bars and percentages near their threshold |
+| `colors.critical` | color name | `red` | Critical color for limit-reached states and critical thresholds |
+
+Supported color names: `red`, `green`, `yellow`, `magenta`, `cyan`, `brightBlue`, `brightMagenta`.
 
 ### Usage Limits (Pro/Max/Team)
 
@@ -195,6 +204,13 @@ To disable, set `display.showUsage` to `false`.
     "showTodos": true,
     "showConfigCounts": true,
     "showDuration": true
+  },
+  "colors": {
+    "context": "cyan",
+    "usage": "cyan",
+    "warning": "yellow",
+    "usageWarning": "magenta",
+    "critical": "red"
   },
   "usage": {
     "cacheTtlSeconds": 120,
