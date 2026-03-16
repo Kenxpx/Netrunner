@@ -5,7 +5,7 @@ import * as os from 'node:os';
 export type LineLayoutType = 'compact' | 'expanded';
 
 export type AutocompactBufferMode = 'enabled' | 'disabled';
-export type ContextValueMode = 'percent' | 'tokens';
+export type ContextValueMode = 'percent' | 'tokens' | 'remaining';
 
 export interface HudConfig {
   lineLayout: LineLayoutType;
@@ -85,7 +85,7 @@ function validateAutocompactBuffer(value: unknown): value is AutocompactBufferMo
 }
 
 function validateContextValue(value: unknown): value is ContextValueMode {
-  return value === 'percent' || value === 'tokens';
+  return value === 'percent' || value === 'tokens' || value === 'remaining';
 }
 
 interface LegacyConfig {
