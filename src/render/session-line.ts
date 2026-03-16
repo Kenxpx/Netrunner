@@ -216,7 +216,7 @@ function formatTokens(n: number): string {
   return n.toString();
 }
 
-function formatContextValue(ctx: RenderContext, percent: number, mode: 'percent' | 'tokens'): string {
+function formatContextValue(ctx: RenderContext, percent: number, mode: 'percent' | 'tokens' | 'remaining'): string {
   if (mode === 'tokens') {
     const totalTokens = getTotalTokens(ctx.stdin);
     const size = ctx.stdin.context_window?.context_window_size ?? 0;
@@ -224,6 +224,10 @@ function formatContextValue(ctx: RenderContext, percent: number, mode: 'percent'
       return `${formatTokens(totalTokens)}/${formatTokens(size)}`;
     }
     return formatTokens(totalTokens);
+  }
+
+  if (mode === 'remaining') {
+    return `${Math.max(0, 100 - percent)}%`;
   }
 
   return `${percent}%`;
