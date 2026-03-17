@@ -155,6 +155,9 @@ export function renderSessionLine(ctx: RenderContext): string {
       const effectiveUsage = Math.max(fiveHour ?? 0, sevenDay ?? 0);
 
       if (effectiveUsage >= usageThreshold) {
+        const syncingSuffix = ctx.usageData.apiError === 'rate-limited'
+          ? ` ${dim('(syncing...)')}`
+          : '';
         const fiveHourDisplay = formatUsagePercent(fiveHour, colors);
         const fiveHourReset = formatResetTime(ctx.usageData.fiveHourResetAt);
 
@@ -178,9 +181,9 @@ export function renderSessionLine(ctx: RenderContext): string {
             : (sevenDayReset
                 ? `7d: ${sevenDayDisplay} (${sevenDayReset})`
                 : `7d: ${sevenDayDisplay}`);
-          parts.push(`${fiveHourPart} | ${sevenDayPart}`);
+          parts.push(`${fiveHourPart} | ${sevenDayPart}${syncingSuffix}`);
         } else {
-          parts.push(fiveHourPart);
+          parts.push(`${fiveHourPart}${syncingSuffix}`);
         }
       }
     }
