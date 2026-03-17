@@ -44,7 +44,7 @@ function validateAutocompactBuffer(value) {
     return value === 'enabled' || value === 'disabled';
 }
 function validateContextValue(value) {
-    return value === 'percent' || value === 'tokens';
+    return value === 'percent' || value === 'tokens' || value === 'remaining';
 }
 function migrateConfig(userConfig) {
     const migrated = { ...userConfig };
