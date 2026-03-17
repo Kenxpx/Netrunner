@@ -5,6 +5,29 @@ allowed-tools: Bash, Read, Edit, AskUserQuestion
 
 **Note**: Placeholders like `{RUNTIME_PATH}`, `{SOURCE}`, and `{GENERATED_COMMAND}` should be substituted with actual detected values.
 
+## Step 0: Linux Cross-Device Check
+
+**Run this FIRST on Linux** (if `uname -s` returns "Linux"):
+
+```bash
+[ "$(df --output=source ~ /tmp 2>/dev/null | tail -2 | uniq | wc -l)" = "2" ] && echo "CROSS_DEVICE"
+```
+
+If this outputs `CROSS_DEVICE`:
+1. **Explain**: `/tmp` and home directory are on different filesystems. This causes `EXDEV: cross-device link not permitted` during plugin installation. This is a [Claude Code platform limitation](https://github.com/anthropics/claude-code/issues/14799).
+2. **Check if plugin is already installed**:
+   ```bash
+   ls -td ~/.claude/plugins/cache/claude-hud/claude-hud/*/ 2>/dev/null | head -1
+   ```
+3. **If NOT installed**, provide the workaround:
+   ```bash
+   mkdir -p ~/.cache/tmp && TMPDIR=~/.cache/tmp claude /plugin install claude-hud
+   ```
+   Tell user to run this command, then return here and run `/claude-hud:setup` again.
+4. **If already installed**, continue to Step 1 (the EXDEV issue is only during installation).
+
+For non-Linux systems (macOS, Windows), skip to Step 1.
+
 ## Step 1: Detect Platform & Runtime
 
 **macOS/Linux** (if `uname -s` returns "Darwin", "Linux", or a MINGW*/MSYS*/CYGWIN* variant):
@@ -15,15 +38,7 @@ allowed-tools: Bash, Read, Edit, AskUserQuestion
    ```bash
    ls -td ~/.claude/plugins/cache/claude-hud/claude-hud/*/ 2>/dev/null | head -1
    ```
-   If empty, the plugin is not installed. **On Linux only** (if `uname -s` returns "Linux"), check for cross-device filesystem issue:
-   ```bash
-   [ "$(df --output=source ~/.claude /tmp 2>/dev/null | tail -2 | uniq | wc -l)" = "2" ] && echo "CROSS_DEVICE"
-   ```
-   If this outputs `CROSS_DEVICE`, explain that `/tmp` and `~/.claude` are on different filesystems, which causes `EXDEV: cross-device link not permitted` during installation. Provide the fix:
-   ```bash
-   mkdir -p ~/.cache/tmp && TMPDIR=~/.cache/tmp /plugin install claude-hud
-   ```
-   After they run this, re-check the plugin path and continue setup. For non-Linux systems (macOS, etc.), simply tell user to install via marketplace first.
+   If empty, the plugin is not installed. For non-Linux systems (macOS, etc.), tell user to install via marketplace first.
 
 2. Get runtime absolute path (prefer bun for performance, fallback to node):
    ```bash
