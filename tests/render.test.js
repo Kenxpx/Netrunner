@@ -446,6 +446,56 @@ test('renderSessionLine displays plan name in model bracket', () => {
   assert.ok(line.includes('Max'), 'should include plan name');
 });
 
+test('renderSessionLine prefers subscription plan over API env var', () => {
+  const ctx = baseContext();
+  ctx.usageData = {
+    planName: 'Max',
+    fiveHour: 23,
+    sevenDay: 45,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+  };
+  const savedApiKey = process.env.ANTHROPIC_API_KEY;
+  process.env.ANTHROPIC_API_KEY = 'test-key';
+
+  try {
+    const line = renderSessionLine(ctx);
+    assert.ok(line.includes('Max'), 'should include plan label');
+    assert.ok(!line.includes('API'), 'should not include API label when plan is known');
+  } finally {
+    if (savedApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = savedApiKey;
+    }
+  }
+});
+
+test('renderProjectLine prefers subscription plan over API env var', () => {
+  const ctx = baseContext();
+  ctx.usageData = {
+    planName: 'Pro',
+    fiveHour: 10,
+    sevenDay: 20,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+  };
+  const savedApiKey = process.env.ANTHROPIC_API_KEY;
+  process.env.ANTHROPIC_API_KEY = 'test-key';
+
+  try {
+    const line = renderProjectLine(ctx);
+    assert.ok(line?.includes('Pro'), 'should include plan label');
+    assert.ok(!line?.includes('API'), 'should not include API label when plan is known');
+  } finally {
+    if (savedApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = savedApiKey;
+    }
+  }
+});
+
 test('renderSessionLine shows Bedrock label and hides usage for bedrock model ids', () => {
   const ctx = baseContext();
   ctx.stdin.model = { display_name: 'Sonnet', id: 'anthropic.claude-3-5-sonnet-20240620-v1:0' };
